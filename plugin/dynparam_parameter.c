@@ -1,7 +1,9 @@
 /* -*- Mode: C ; c-basic-offset: 2 -*- */
 /*****************************************************************************
  *
- *   Copyright (C) 2006 Nedko Arnaudov <nedko@arnaudov.name>
+ *   This file is part of lv2dynparam plugin library
+ *
+ *   Copyright (C) 2006,2007 Nedko Arnaudov <nedko@arnaudov.name>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -23,15 +25,14 @@
 /* #include <stdio.h> */
 #include <assert.h>
 
-#include "common.h"
-#include "lv2.h"
-#include "lv2dynparam.h"
+#include "../lv2.h"
+#include "../lv2dynparam.h"
 #include "dynparam.h"
-#include "list.h"
+#include "../list.h"
 #include "dynparam_internal.h"
 
 //#define LOG_LEVEL LOG_LEVEL_DEBUG
-#include "log.h"
+#include "../log.h"
 
 void
 lv2dynparam_plugin_parameter_free(struct lv2dynparam_plugin_parameter * param_ptr)
@@ -149,7 +150,7 @@ void
 lv2dynparam_plugin_parameter_change(
   lv2dynparam_parameter_handle parameter)
 {
-  //printf("lv2dynparam_plugin_parameter_change() called.\n");
+  //LOG_DEBUG("lv2dynparam_plugin_parameter_change() called.\n");
 
   switch (parameter_ptr->type)
   {
@@ -187,7 +188,7 @@ lv2dynparam_plugin_param_notify(
     /* There is nothing to notify for */
     return;
   case LV2DYNPARAM_PENDING_APPEAR:
-/*     printf("Appearing %s\n", param_ptr->name); */
+/*     LOG_DEBUG("Appearing %s\n", param_ptr->name); */
     if (instance_ptr->host_callbacks->parameter_appear(
           instance_ptr->host_context,
           param_ptr->group_ptr->host_context,
@@ -199,7 +200,7 @@ lv2dynparam_plugin_param_notify(
     }
     return;
   case LV2DYNPARAM_PENDING_DISAPPEAR:
-/*     printf("Disappering %s\n", param_ptr->name); */
+/*     LOG_DEBUG("Disappering %s\n", param_ptr->name); */
     if (instance_ptr->host_callbacks->parameter_disappear(
           instance_ptr->host_context,
           param_ptr->host_context))

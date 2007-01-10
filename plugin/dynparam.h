@@ -1,7 +1,9 @@
 /* -*- Mode: C ; c-basic-offset: 2 -*- */
 /*****************************************************************************
  *
- *   Copyright (C) 2006 Nedko Arnaudov <nedko@arnaudov.name>
+ *   This file is part of lv2dynparam plugin library
+ *
+ *   Copyright (C) 2006,2007 Nedko Arnaudov <nedko@arnaudov.name>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -21,7 +23,9 @@
 #ifndef DYNPARAM_H__84DA2DA3_61BD_45AC_B202_6A08F27D56F5__INCLUDED
 #define DYNPARAM_H__84DA2DA3_61BD_45AC_B202_6A08F27D56F5__INCLUDED
 
-#if !defined(BOOL)
+#if defined(GLIB_CHECK_VERSION)
+#define BOOL gboolean
+#elif !defined(BOOL)
 #define BOOL int
 #define TRUE 1
 #define FALSE 0

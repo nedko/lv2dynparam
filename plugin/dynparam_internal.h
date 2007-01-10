@@ -1,7 +1,9 @@
 /* -*- Mode: C ; c-basic-offset: 2 -*- */
 /*****************************************************************************
  *
- *   Copyright (C) 2006 Nedko Arnaudov <nedko@arnaudov.name>
+ *   This file is part of lv2dynparam plugin library
+ *
+ *   Copyright (C) 2006,2007 Nedko Arnaudov <nedko@arnaudov.name>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by

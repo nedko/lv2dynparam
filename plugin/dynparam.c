@@ -1,7 +1,9 @@
 /* -*- Mode: C ; c-basic-offset: 2 -*- */
 /*****************************************************************************
  *
- *   Copyright (C) 2006 Nedko Arnaudov <nedko@arnaudov.name>
+ *   This file is part of lv2dynparam plugin library
+ *
+ *   Copyright (C) 2006,2007 Nedko Arnaudov <nedko@arnaudov.name>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -21,14 +23,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "common.h"
-#include "lv2.h"
-#include "lv2dynparam.h"
+#include "../lv2.h"
+#include "../lv2dynparam.h"
 #include "dynparam.h"
-#include "list.h"
+#include "../list.h"
 #include "dynparam_internal.h"
 #define LOG_LEVEL LOG_LEVEL_DEBUG
-#include "log.h"
+#include "../log.h"
 
 static struct lv2dynparam_plugin_callbacks g_lv2dynparam_plugin_callbacks =
 {

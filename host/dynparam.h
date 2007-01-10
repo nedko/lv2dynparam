@@ -1,9 +1,9 @@
 /* -*- Mode: C ; c-basic-offset: 2 -*- */
 /*****************************************************************************
  *
- *   This file is part of zynjacku
+ *   This file is part of lv2dynparam host library
  *
- *   Copyright (C) 2006 Nedko Arnaudov <nedko@arnaudov.name>
+ *   Copyright (C) 2006,2007 Nedko Arnaudov <nedko@arnaudov.name>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -30,8 +30,6 @@
 #define TRUE 1
 #define FALSE 0
 #endif
-
-#define LV2DYNPARAM_URI "http://nedko.arnaudov.name/soft/zyn/lv2dynparam.h"
 
 typedef void * lv2dynparam_host_instance;
 typedef void * lv2dynparam_host_parameter;

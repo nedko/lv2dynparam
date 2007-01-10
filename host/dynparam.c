@@ -1,9 +1,9 @@
 /* -*- Mode: C ; c-basic-offset: 2 -*- */
 /*****************************************************************************
  *
- *   This file is part of zynjacku
+ *   This file is part of lv2dynparam host library
  *
- *   Copyright (C) 2006 Nedko Arnaudov <nedko@arnaudov.name>
+ *   Copyright (C) 2006,2007 Nedko Arnaudov <nedko@arnaudov.name>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -24,17 +24,17 @@
 #include <string.h>
 #include <assert.h>
 
-#include "lv2.h"
-#include "lv2dynparam.h"
+#include "../lv2.h"
+#include "../lv2dynparam.h"
 #include "dynparam.h"
-#include "audiolock.h"
-#include "list.h"
+#include "../audiolock.h"
+#include "../list.h"
 #include "dynparam_internal.h"
 #include "dynparam_host_callbacks.h"
 #include "dynparam_preallocate.h"
 
 #define LOG_LEVEL LOG_LEVEL_ERROR
-#include "log.h"
+#include "../log.h"
 
 void
 lv2dynparam_host_map_type_uri(

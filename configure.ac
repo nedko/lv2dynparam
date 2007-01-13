@@ -31,4 +31,6 @@ AC_PROG_LIBTOOL
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([plugin/Makefile])
 AC_CONFIG_FILES([host/Makefile])
+AC_CONFIG_FILES([lv2dynparamplugin-1.pc])
+AC_CONFIG_FILES([lv2dynparamhost-1.pc])
 AC_OUTPUT

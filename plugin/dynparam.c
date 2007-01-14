@@ -45,15 +45,18 @@ static struct lv2dynparam_plugin_callbacks g_lv2dynparam_plugin_callbacks =
   .parameter_change = lv2dynparam_plugin_parameter_change
 };
 
-void * g_lv2dynparam_plugin_extension_data;
-
-struct list_head g_instances;
+static struct list_head g_instances;
 
 void lv2dynparam_plugin_initialise() __attribute__((constructor));
 void lv2dynparam_plugin_initialise()
 {
   INIT_LIST_HEAD(&g_instances);
-  g_lv2dynparam_plugin_extension_data = &g_lv2dynparam_plugin_callbacks;
+}
+
+void *
+get_lv2dynparam_plugin_extension_data(void)
+{
+  return &g_lv2dynparam_plugin_callbacks;
 }
 
 BOOL

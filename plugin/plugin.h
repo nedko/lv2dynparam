@@ -31,7 +31,8 @@
 #define FALSE 0
 #endif
 
-extern void * g_lv2dynparam_plugin_extension_data;
+void *
+get_lv2dynparam_plugin_extension_data(void);
 
 typedef void * lv2dynparam_plugin_instance;
 typedef void * lv2dynparam_plugin_parameter;

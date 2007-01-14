@@ -28,7 +28,7 @@
 
 #include "../lv2.h"
 #include "../lv2dynparam.h"
-#include "dynparam.h"
+#include "host.h"
 #include "../audiolock.h"
 #include "../list.h"
 #include "dynparam_internal.h"

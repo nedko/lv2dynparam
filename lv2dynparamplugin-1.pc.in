@@ -7,4 +7,4 @@ Name: lv2dynparamplugin
 Version: @VERSION@
 Description: Convenience library for plugins to support LV2 dynparam extension
 Libs: -L${libdir} -llv2dynparamplugin
-Cflags: -I${includedir}
+Cflags: -I${includedir}/lv2dynparam-1

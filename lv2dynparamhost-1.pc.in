@@ -7,4 +7,4 @@ Name: lv2dynparamhost
 Version: @VERSION@
 Description: Convenience library for hosts to support LV2 dynparam extension
 Libs: -L${libdir} -llv2dynparamhost
-Cflags: -I${includedir}
+Cflags: -I${includedir}/lv2dynparam-1

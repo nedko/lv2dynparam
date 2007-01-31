@@ -116,7 +116,7 @@ lv2dynparam_plugin_group_clean(
   struct lv2dynparam_plugin_group * child_group_ptr;
   struct lv2dynparam_plugin_parameter * child_param_ptr;
 
-  free(group_ptr->name);
+  LOG_DEBUG("Cleaning group \"%s\"", group_ptr->name);
 
   while (!list_empty(&group_ptr->child_groups))
   {
@@ -126,9 +126,11 @@ lv2dynparam_plugin_group_clean(
     lv2dynparam_plugin_group_free(child_group_ptr);
   }
 
+  LOG_DEBUG("Cleaning parameters...");
+
   while (!list_empty(&group_ptr->child_parameters))
   {
-    node_ptr = group_ptr->child_groups.next;
+    node_ptr = group_ptr->child_parameters.next;
     child_param_ptr = list_entry(node_ptr, struct lv2dynparam_plugin_parameter, siblings);
     list_del(node_ptr);
     lv2dynparam_plugin_parameter_free(child_param_ptr);
@@ -140,6 +142,7 @@ lv2dynparam_plugin_group_free(
   struct lv2dynparam_plugin_group * group_ptr)
 {
   lv2dynparam_plugin_group_clean(group_ptr);
+  LOG_DEBUG("Freeing group \"%s\"", group_ptr->name);
   free(group_ptr);
 }
 

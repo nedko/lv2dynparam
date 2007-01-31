@@ -37,7 +37,8 @@
 void
 lv2dynparam_plugin_parameter_free(struct lv2dynparam_plugin_parameter * param_ptr)
 {
-  free(param_ptr->name);
+  LOG_DEBUG("Freeing parameter \"%s\"", param_ptr->name);
+
   free(param_ptr);
 }
 

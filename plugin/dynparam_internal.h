@@ -33,6 +33,7 @@
 #define LV2DYNPARAM_PARAMETER_TYPE_STRING    4
 #define LV2DYNPARAM_PARAMETER_TYPE_FILENAME  5
 #define LV2DYNPARAM_PARAMETER_TYPE_BOOLEAN   6
+#define LV2DYNPARAM_PARAMETER_TYPE_ENUM      7
 
 #define LV2DYNPARAM_PENDING_NOTHING    0 /* nothing pending */
 #define LV2DYNPARAM_PENDING_APPEAR     1 /* pending appear */
@@ -85,6 +86,12 @@ struct lv2dynparam_plugin_parameter
     } note;
 /*     char string[??]; */
 /*     char filename[??]; */
+    struct
+    {
+      char ** values;
+      unsigned int values_count;
+      unsigned int selected_value;
+    } enumeration;
     unsigned char boolean;
     struct
     {
@@ -96,6 +103,7 @@ struct lv2dynparam_plugin_parameter
   {
     lv2dynparam_plugin_param_boolean_changed boolean;
     lv2dynparam_plugin_param_float_changed fpoint;
+    lv2dynparam_plugin_param_enum_changed enumeration;
   } plugin_callback;
   void * plugin_callback_context;
 

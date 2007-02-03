@@ -35,7 +35,7 @@
 #include "dynparam_host_callbacks.h"
 #include "dynparam_preallocate.h"
 
-#define LOG_LEVEL LOG_LEVEL_ERROR
+//#define LOG_LEVEL LOG_LEVEL_DEBUG
 #include "../log.h"
 
 #define instance_ptr ((struct lv2dynparam_host_instance *)instance_host_context)
@@ -125,7 +125,7 @@ lv2dynparam_host_parameter_appear(
   param_ptr = lv2dynparam_get_unused_parameter();
   if (param_ptr == NULL)
   {
-    goto fail;
+    return FALSE;
   }
 
   param_ptr->param_handle = parameter;
@@ -139,7 +139,16 @@ lv2dynparam_host_parameter_appear(
 
   LOG_DEBUG("Parameter \"%s\" of type \"%s\" with parent \"%s\" appeared.", param_ptr->name, param_ptr->type_uri, group_ptr->name);
 
-  lv2dynparam_host_map_type_uri(param_ptr);
+  if (!lv2dynparam_host_map_type_uri(param_ptr))
+  {
+    LOG_WARNING("Ignoring parameter of unknown type \"%s\"", param_ptr->type_uri);
+
+    lv2dynparam_put_unused_parameter(param_ptr);
+
+    *parameter_host_context = NULL;
+
+    return TRUE;
+  }
 
   instance_ptr->callbacks_ptr->parameter_get_value(
     parameter,
@@ -147,7 +156,8 @@ lv2dynparam_host_parameter_appear(
 
   if (param_ptr->type == LV2DYNPARAM_PARAMETER_TYPE_FLOAT ||
       param_ptr->type == LV2DYNPARAM_PARAMETER_TYPE_INT ||
-      param_ptr->type == LV2DYNPARAM_PARAMETER_TYPE_NOTE)
+      param_ptr->type == LV2DYNPARAM_PARAMETER_TYPE_NOTE ||
+      param_ptr->type == LV2DYNPARAM_PARAMETER_TYPE_ENUM)
   {
     /* ranged type */
     instance_ptr->callbacks_ptr->parameter_get_range(
@@ -166,12 +176,12 @@ lv2dynparam_host_parameter_appear(
   switch (param_ptr->type)
   {
   case LV2DYNPARAM_PARAMETER_TYPE_BOOLEAN:
-    param_ptr->value.boolean = *(unsigned char *)(param_ptr->value_ptr);
-    LOG_DEBUG("Boolean parameter with value %s", param_ptr->value.boolean ? "TRUE" : "FALSE");
+    param_ptr->data.boolean = *(unsigned char *)(param_ptr->value_ptr);
+    LOG_DEBUG("Boolean parameter with value %s", param_ptr->data.boolean ? "TRUE" : "FALSE");
     break;
   case LV2DYNPARAM_PARAMETER_TYPE_FLOAT:
-    param_ptr->value.fpoint = *(float *)(param_ptr->value_ptr);
-    LOG_DEBUG("Float parameter with value %f", param_ptr->value.fpoint);
+    param_ptr->data.fpoint.value = *(float *)(param_ptr->value_ptr);
+    LOG_DEBUG("Float parameter with value %f", param_ptr->data.fpoint.value);
     break;
   }
 
@@ -179,10 +189,15 @@ lv2dynparam_host_parameter_appear(
   switch (param_ptr->type)
   {
   case LV2DYNPARAM_PARAMETER_TYPE_FLOAT:
-    param_ptr->min.fpoint = *(float *)(param_ptr->min_ptr);
-    param_ptr->max.fpoint = *(float *)(param_ptr->max_ptr);
-    LOG_DEBUG("Float parameter with range %f - %f", param_ptr->min.fpoint, param_ptr->max.fpoint);
+    param_ptr->data.fpoint.min = *(float *)(param_ptr->min_ptr);
+    param_ptr->data.fpoint.max = *(float *)(param_ptr->max_ptr);
+    LOG_DEBUG("Float parameter with range %f - %f", param_ptr->data.fpoint.min, param_ptr->data.fpoint.max);
     break;
+/*   case LV2DYNPARAM_PARAMETER_TYPE_ENUM: */
+/*     param_ptr->data.enumeration.values_count = *(float *)(param_ptr->max_ptr); */
+/*     param_ptr->data.enumeration.values = *(char ***)(param_ptr->min_ptr); */
+/*     LOG_DEBUG("Float parameter with range %f - %f", param_ptr->data.fpoint.min, param_ptr->data.fpoint.max); */
+/*     break; */
   }
 
   param_ptr->pending_state = LV2DYNPARAM_PENDING_APPEAR;
@@ -203,6 +218,11 @@ lv2dynparam_host_parameter_disappear(
   void * instance_host_context,
   void * parameter_host_context)
 {
+  if (param_ptr == NULL)
+  {
+    LOG_DEBUG("Ignored parameter disappeared.");
+  }
+
   LOG_DEBUG("Parameter %s disappeared.", param_ptr->name);
 
   param_ptr->pending_state = LV2DYNPARAM_PENDING_DISAPPEAR;

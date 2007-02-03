@@ -72,6 +72,9 @@ lv2dynparam_plugin_parameter_get_type_uri(
   case LV2DYNPARAM_PARAMETER_TYPE_BOOLEAN:
     uri = LV2DYNPARAM_PARAMETER_TYPE_BOOLEAN_URI;
     break;
+  case LV2DYNPARAM_PARAMETER_TYPE_ENUM:
+    uri = LV2DYNPARAM_PARAMETER_TYPE_ENUM_URI;
+    break;
   default:
     assert(0);
     return;
@@ -144,6 +147,10 @@ lv2dynparam_plugin_parameter_get_range(
     *value_min_buffer = &parameter_ptr->data.note.min;
     *value_max_buffer = &parameter_ptr->data.note.max;
     return;
+  case LV2DYNPARAM_PARAMETER_TYPE_ENUM:
+    *value_min_buffer = &parameter_ptr->data.enumeration.values;
+    *value_max_buffer = &parameter_ptr->data.enumeration.values_count;
+    return;
   }
 }
 
@@ -151,7 +158,7 @@ void
 lv2dynparam_plugin_parameter_change(
   lv2dynparam_parameter_handle parameter)
 {
-  //LOG_DEBUG("lv2dynparam_plugin_parameter_change() called.\n");
+  //LOG_DEBUG("lv2dynparam_plugin_parameter_change() called.");
 
   switch (parameter_ptr->type)
   {
@@ -189,7 +196,7 @@ lv2dynparam_plugin_param_notify(
     /* There is nothing to notify for */
     return;
   case LV2DYNPARAM_PENDING_APPEAR:
-/*     LOG_DEBUG("Appearing %s\n", param_ptr->name); */
+/*     LOG_DEBUG("Appearing %s", param_ptr->name); */
     if (instance_ptr->host_callbacks->parameter_appear(
           instance_ptr->host_context,
           param_ptr->group_ptr->host_context,
@@ -201,7 +208,7 @@ lv2dynparam_plugin_param_notify(
     }
     return;
   case LV2DYNPARAM_PENDING_DISAPPEAR:
-/*     LOG_DEBUG("Disappering %s\n", param_ptr->name); */
+/*     LOG_DEBUG("Disappering %s", param_ptr->name); */
     if (instance_ptr->host_callbacks->parameter_disappear(
           instance_ptr->host_context,
           param_ptr->host_context))
@@ -408,6 +415,166 @@ lv2dynparam_plugin_param_float_add(
   *param_handle_ptr = (lv2dynparam_parameter_handle)param_ptr;
 
   return TRUE;
+}
+
+BOOL
+lv2dynparam_plugin_param_enum_add(
+  lv2dynparam_plugin_instance instance_handle,
+  lv2dynparam_plugin_group group,
+  const char * name,
+  const char ** values_ptr_ptr,
+  unsigned int values_count,
+  unsigned int initial_value_index,
+  lv2dynparam_plugin_param_enum_changed callback,
+  void * callback_context,
+  lv2dynparam_plugin_parameter * param_handle_ptr)
+{
+  struct lv2dynparam_plugin_parameter * param_ptr;
+  struct lv2dynparam_plugin_group * group_ptr;
+  struct list_head * node_ptr;
+  size_t name_size;
+  size_t value_size;
+  unsigned int i;
+  char ** values;
+
+  LOG_DEBUG("lv2dynparam_plugin_param_enum_add() called for \"%s\"", name);
+
+/*   for (i = 0 ; i < values_count ; i++) */
+/*   { */
+/*     LOG_DEBUG("[%u] possible value \"%s\"%s", i, values_ptr_ptr[i], i == initial_value_index ? " SELECTED" : ""); */
+/*   } */
+
+  name_size = strlen(name) + 1;
+  if (name_size >= LV2DYNPARAM_MAX_STRING_SIZE)
+  {
+    assert(0);
+    goto fail;
+  }
+
+  /* FIXME: don't sleep */
+  values = malloc(values_count * sizeof(char *));
+  if (values == NULL)
+  {
+    goto fail;
+  }
+
+  for (i = 0 ; i < values_count ; i++)
+  {
+    value_size = strlen(values_ptr_ptr[i]);
+
+    /* FIXME: don't sleep */
+    values[i] = malloc(value_size);
+    if (values[i] == NULL)
+    {
+      while (i > 0)
+      {
+        i--;
+        free(values[i]);
+      }
+
+      free(values);
+
+      goto fail;
+    }
+
+    memcpy(values[i], values_ptr_ptr[i], value_size);
+  }
+
+  if (group == NULL)
+  {
+    group_ptr = &instance_ptr->root_group;
+  }
+  else
+  {
+    group_ptr = (struct lv2dynparam_plugin_group *)group;
+  }
+
+  /* Search for same parameter in pending disappear state, and try to reuse it */
+  list_for_each(node_ptr, &group_ptr->child_parameters)
+  {
+    param_ptr = list_entry(node_ptr, struct lv2dynparam_plugin_parameter, siblings);
+
+    assert(param_ptr->group_ptr == group_ptr);
+
+    if (strcmp(param_ptr->name, name) == 0)
+    {
+      if (param_ptr->pending != LV2DYNPARAM_PENDING_DISAPPEAR)
+      {
+        assert(0);                /* groups cannot contain two parameters with same names */
+        goto fail_free_values;
+      }
+
+      if (param_ptr->type != LV2DYNPARAM_PARAMETER_TYPE_ENUM)
+      {
+        /* There is pending disappear of parameter with same name but of different type */
+        break;
+      }
+
+      /* free all values array.. */
+
+      for (i = 0 ; i < param_ptr->data.enumeration.values_count ; i++)
+      {
+        free(param_ptr->data.enumeration.values[i]);
+      }
+
+      free(param_ptr->data.enumeration.values);
+
+      /* update parameter data... */
+      param_ptr->data.enumeration.values = values;
+      param_ptr->data.enumeration.values_count = values_count;
+      param_ptr->data.enumeration.selected_value = initial_value_index;
+
+      param_ptr->plugin_callback.enumeration = callback;
+      param_ptr->plugin_callback_context = callback_context;
+      param_ptr->pending = LV2DYNPARAM_PENDING_CHANGE;
+
+      *param_handle_ptr = (lv2dynparam_parameter_handle)param_ptr;
+
+      return TRUE;
+    }
+  }
+
+  /* FIXME: don't sleep */
+  param_ptr = malloc(sizeof(struct lv2dynparam_plugin_parameter));
+  if (param_ptr == NULL)
+  {
+    goto fail_free_values;
+  }
+
+  param_ptr->type = LV2DYNPARAM_PARAMETER_TYPE_ENUM;
+
+  memcpy(param_ptr->name, name, name_size);
+
+  param_ptr->group_ptr = group_ptr;
+
+  param_ptr->data.enumeration.values = values;
+  param_ptr->data.enumeration.values_count = values_count;
+  param_ptr->data.enumeration.selected_value = initial_value_index;
+
+  param_ptr->plugin_callback.enumeration = callback;
+  param_ptr->plugin_callback_context = callback_context;
+
+  param_ptr->pending = LV2DYNPARAM_PENDING_APPEAR;
+  instance_ptr->pending++;
+
+  list_add_tail(&param_ptr->siblings, &group_ptr->child_parameters);
+
+  lv2dynparam_plugin_param_notify(instance_ptr, param_ptr);
+
+  *param_handle_ptr = (lv2dynparam_parameter_handle)param_ptr;
+
+  return TRUE;
+
+fail_free_values:
+  for (i = 0 ; i < values_count ; i++)
+  {
+    free(values[i]);
+  }
+
+  free(values);
+
+fail:
+  return FALSE;
 }
 
 BOOL

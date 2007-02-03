@@ -36,21 +36,23 @@
 #define LOG_LEVEL LOG_LEVEL_ERROR
 #include "../log.h"
 
-void
+BOOL
 lv2dynparam_host_map_type_uri(
   struct lv2dynparam_host_parameter * parameter_ptr)
 {
   if (strcmp(parameter_ptr->type_uri, LV2DYNPARAM_PARAMETER_TYPE_BOOLEAN_URI) == 0)
   {
     parameter_ptr->type = LV2DYNPARAM_PARAMETER_TYPE_BOOLEAN;
-    return;
+    return TRUE;
   }
 
   if (strcmp(parameter_ptr->type_uri, LV2DYNPARAM_PARAMETER_TYPE_FLOAT_URI) == 0)
   {
     parameter_ptr->type = LV2DYNPARAM_PARAMETER_TYPE_FLOAT;
-    return;
+    return TRUE;
   }
+
+  return FALSE;
 }
 
 static struct lv2dynparam_host_callbacks g_lv2dynparam_host_callbacks =
@@ -222,7 +224,7 @@ lv2dynparam_host_notify_parameter_appeared(
       instance_ptr->instance_ui_context,
       parameter_ptr->group_ptr->ui_context,
       parameter_ptr->name,
-      parameter_ptr->value.boolean,
+      parameter_ptr->data.boolean,
       &parameter_ptr->ui_context);
     break;
   case LV2DYNPARAM_PARAMETER_TYPE_FLOAT:
@@ -231,9 +233,9 @@ lv2dynparam_host_notify_parameter_appeared(
       instance_ptr->instance_ui_context,
       parameter_ptr->group_ptr->ui_context,
       parameter_ptr->name,
-      parameter_ptr->value.fpoint,
-      parameter_ptr->min.fpoint,
-      parameter_ptr->max.fpoint,
+      parameter_ptr->data.fpoint.value,
+      parameter_ptr->data.fpoint.min,
+      parameter_ptr->data.fpoint.max,
       &parameter_ptr->ui_context);
     break;
   }
@@ -434,10 +436,10 @@ lv2dynparam_host_realtime_run(
       switch (parameter_ptr->type)
       {
       case LV2DYNPARAM_PARAMETER_TYPE_BOOLEAN:
-        *((unsigned char *)parameter_ptr->value_ptr) = parameter_ptr->value.boolean ? 1 : 0;
+        *((unsigned char *)parameter_ptr->value_ptr) = parameter_ptr->data.boolean ? 1 : 0;
         break;
       case LV2DYNPARAM_PARAMETER_TYPE_FLOAT:
-        *((float *)parameter_ptr->value_ptr) = parameter_ptr->value.fpoint;
+        *((float *)parameter_ptr->value_ptr) = parameter_ptr->data.fpoint.value;
         break;
       default:
         LOG_ERROR("Parameter change for parameter of unknown type %u received", message_ptr->message_type);
@@ -557,7 +559,7 @@ dynparam_parameter_boolean_change(
 
   message_ptr = lv2dynparam_get_unused_message_may_block();
 
-  parameter_ptr->value.boolean = value;
+  parameter_ptr->data.boolean = value;
 
   message_ptr->message_type = LV2DYNPARAM_HOST_MESSAGE_TYPE_PARAMETER_CHANGE;
 
@@ -582,7 +584,7 @@ dynparam_parameter_float_change(
 
   message_ptr = lv2dynparam_get_unused_message_may_block();
 
-  parameter_ptr->value.fpoint = value;
+  parameter_ptr->data.fpoint.value = value;
 
   message_ptr->message_type = LV2DYNPARAM_HOST_MESSAGE_TYPE_PARAMETER_CHANGE;
 

@@ -23,13 +23,7 @@
 #ifndef DYNPARAM_H__84DA2DA3_61BD_45AC_B202_6A08F27D56F5__INCLUDED
 #define DYNPARAM_H__84DA2DA3_61BD_45AC_B202_6A08F27D56F5__INCLUDED
 
-#if defined(GLIB_CHECK_VERSION)
-#define BOOL gboolean
-#elif !defined(BOOL)
-#define BOOL int
-#define TRUE 1
-#define FALSE 0
-#endif
+#include "types.h"
 
 void *
 get_lv2dynparam_plugin_extension_data(void);
@@ -58,6 +52,12 @@ typedef BOOL
   void * context,
   float value);
 
+typedef BOOL
+(*lv2dynparam_plugin_param_enum_changed)(
+  void * context,
+  const char * value,
+  unsigned int value_index);
+
 BOOL
 lv2dynparam_plugin_group_add(
   lv2dynparam_plugin_instance instance,
@@ -85,6 +85,18 @@ lv2dynparam_plugin_param_float_add(
   float min,
   float max,
   lv2dynparam_plugin_param_float_changed callback,
+  void * callback_context,
+  lv2dynparam_plugin_parameter * param_ptr);
+
+BOOL
+lv2dynparam_plugin_param_enum_add(
+  lv2dynparam_plugin_instance instance,
+  lv2dynparam_plugin_group group,
+  const char * name,
+  const char ** values_ptr_ptr,
+  unsigned int values_count,
+  unsigned int initial_value_index,
+  lv2dynparam_plugin_param_enum_changed callback,
   void * callback_context,
   lv2dynparam_plugin_parameter * param_ptr);
 

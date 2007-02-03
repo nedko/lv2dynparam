@@ -109,8 +109,6 @@
  */
 
 /* Notes:
- * - size_t is the ANSI C type used for memory sizes, as used in
- *   malloc()
  * - if function fails, variables where output parameters are normally
  *   stored remain unmodified.
  * - If host callback, called by plugin, fails - plugin should try the
@@ -421,6 +419,7 @@ struct lv2dynparam_plugin_callbacks
 #define LV2DYNPARAM_PARAMETER_TYPE_STRING_URI        LV2DYNPARAM_BASE_URI "#parameter_string"
 #define LV2DYNPARAM_PARAMETER_TYPE_FILENAME_URI      LV2DYNPARAM_BASE_URI "#parameter_filename"
 #define LV2DYNPARAM_PARAMETER_TYPE_BOOLEAN_URI       LV2DYNPARAM_BASE_URI "#parameter_boolean"
+#define LV2DYNPARAM_PARAMETER_TYPE_ENUM_URI          LV2DYNPARAM_BASE_URI "#parameter_enum"
 
 #if 0
 { /* Adjust editor indent */

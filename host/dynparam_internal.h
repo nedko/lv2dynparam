@@ -33,6 +33,7 @@
 #define LV2DYNPARAM_PARAMETER_TYPE_STRING    4
 #define LV2DYNPARAM_PARAMETER_TYPE_FILENAME  5
 #define LV2DYNPARAM_PARAMETER_TYPE_BOOLEAN   6
+#define LV2DYNPARAM_PARAMETER_TYPE_ENUM      7
 
 #define LV2DYNPARAM_PENDING_NOTHING    0 /* nothing pending */
 #define LV2DYNPARAM_PENDING_APPEAR     1 /* pending appear */
@@ -73,18 +74,19 @@ struct lv2dynparam_host_parameter
   union
   {
     BOOL boolean;
-    float fpoint;
-  } value;
-
-  union
-  {
-    float fpoint;
-  } min;
-
-  union
-  {
-    float fpoint;
-  } max;
+    struct
+    {
+      float value;
+      float min;
+      float max;
+    } fpoint;
+    struct
+    {
+      char ** values;
+      unsigned int values_count;
+      unsigned int selected_value;
+    } enumeration;
+  } data;
 
   unsigned int pending_state;
 
@@ -134,7 +136,7 @@ struct lv2dynparam_host_instance
   struct list_head ui_to_realtime_queue; /* protected by the audiolock */
 };
 
-void
+BOOL
 lv2dynparam_host_map_type_uri(
   struct lv2dynparam_host_parameter * parameter_ptr);
 

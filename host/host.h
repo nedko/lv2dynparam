@@ -23,13 +23,7 @@
 #ifndef DYNPARAM_H__5090F477_0BE7_439F_BF1D_F2EB78822760__INCLUDED
 #define DYNPARAM_H__5090F477_0BE7_439F_BF1D_F2EB78822760__INCLUDED
 
-#if defined(GLIB_CHECK_VERSION)
-#define BOOL gboolean
-#elif !defined(BOOL)
-#define BOOL int
-#define TRUE 1
-#define FALSE 0
-#endif
+#include "types.h"
 
 typedef void * lv2dynparam_host_instance;
 typedef void * lv2dynparam_host_parameter;

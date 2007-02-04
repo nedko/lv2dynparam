@@ -28,6 +28,7 @@
 #include "../lv2dynparam.h"
 #include "../list.h"
 #include "plugin.h"
+#include "../memory_atomic.h"
 #include "dynparam_internal.h"
 #define LOG_LEVEL LOG_LEVEL_ERROR
 #include "../log.h"

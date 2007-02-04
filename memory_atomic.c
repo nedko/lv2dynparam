@@ -188,95 +188,117 @@ lv2dynparam_memory_pool_allocate_sleepy(
 #define DATA_MIN       1024
 #define DATA_SUB       100      /* alloc slightly smaller chunks in hope to not allocating additional page for control data */
 
-static struct lv2dynparam_memory_pool_generic
+struct lv2dynparam_memory_pool_generic
 {
   size_t size;
   lv2dynparam_memory_pool_handle pool;
-} * g_pools;
+};
 
-static size_t g_pools_count;
+struct lv2dynparam_memory
+{
+  struct lv2dynparam_memory_pool_generic * pools;
+  size_t pools_count;
+};
 
 BOOL
 lv2dynparam_memory_init(
   size_t max_size,
   size_t prealloc_min,
-  size_t prealloc_max)
+  size_t prealloc_max,
+  lv2dynparam_memory_handle * handle_ptr)
 {
   size_t i;
   size_t size;
+  struct lv2dynparam_memory * memory_ptr;
 
   LOG_DEBUG("lv2dynparam_memory_init() called.");
 
-  assert(g_pools == NULL);      /* multiple initialization calls? */
+  memory_ptr = malloc(sizeof(struct lv2dynparam_memory));
+  if (memory_ptr == NULL)
+  {
+    goto fail;
+  }
 
   size = DATA_MIN;
-  g_pools_count = 1;
+  memory_ptr->pools_count = 1;
 
-  while ((size << g_pools_count) < max_size + DATA_SUB)
+  while ((size << memory_ptr->pools_count) < max_size + DATA_SUB)
   {
-    g_pools_count++;
+    memory_ptr->pools_count++;
 
-    if (g_pools_count > sizeof(size_t) * 8)
+    if (memory_ptr->pools_count > sizeof(size_t) * 8)
     {
       assert(0);                /* chances that caller really need such huge size are close to zero */
-      return FALSE;
+      goto fail_free;
     }
   }
 
-  g_pools = malloc(g_pools_count * sizeof(struct lv2dynparam_memory_pool_generic));
-  if (g_pools == NULL)
+  memory_ptr->pools = malloc(memory_ptr->pools_count * sizeof(struct lv2dynparam_memory_pool_generic));
+  if (memory_ptr->pools == NULL)
   {
-    return FALSE;
+    goto fail_free;
   }
 
   size = DATA_MIN;
 
-  for (i = 0 ; i < g_pools_count ; i++)
+  for (i = 0 ; i < memory_ptr->pools_count ; i++)
   {
-    g_pools[i].size = size - DATA_SUB;
+    memory_ptr->pools[i].size = size - DATA_SUB;
 
     if (!lv2dynparam_memory_pool_create(
-          g_pools[i].size,
+          memory_ptr->pools[i].size,
           prealloc_min,
           prealloc_max,
-          &g_pools[i].pool))
+          &memory_ptr->pools[i].pool))
     {
       while (i > 0)
       {
         i--;
-        lv2dynparam_memory_pool_destroy(g_pools[i].pool);
+        lv2dynparam_memory_pool_destroy(memory_ptr->pools[i].pool);
       }
 
-      free(g_pools);
-
-      return FALSE;
+      goto fail_free_pools;
     }
 
     size = size << 1; 
   }
 
+  *handle_ptr = (lv2dynparam_memory_handle)memory_ptr;
+
   return TRUE;
+
+fail_free_pools:
+  free(memory_ptr->pools);
+
+fail_free:
+  free(memory_ptr);
+
+fail:
+  return FALSE;
 }
 
+#define memory_ptr ((struct lv2dynparam_memory *)handle_ptr)
 void
-lv2dynparam_memory_uninit()
+lv2dynparam_memory_uninit(
+  lv2dynparam_memory_handle handle_ptr)
 {
   unsigned int i;
 
   LOG_DEBUG("lv2dynparam_memory_uninit() called.");
 
-  for (i = 0 ; i < g_pools_count ; i++)
+  for (i = 0 ; i < memory_ptr->pools_count ; i++)
   {
-    lv2dynparam_memory_pool_destroy(g_pools[i].pool);
+    lv2dynparam_memory_pool_destroy(memory_ptr->pools[i].pool);
   }
 
-  free(g_pools);
+  free(memory_ptr->pools);
 
-  g_pools = NULL;
+  free(memory_ptr);
 }
 
 void *
 lv2dynparam_memory_allocate(
+  lv2dynparam_memory_handle handle_ptr,
   size_t size)
 {
   lv2dynparam_memory_pool_handle * data_ptr;
@@ -284,24 +306,22 @@ lv2dynparam_memory_allocate(
 
   LOG_DEBUG("lv2dynparam_memory_allocate() called.");
 
-  assert(g_pools != NULL);      /* lv2dynparam_memory_init() not called? */
-
   /* pool handle is stored just before user data to ease deallocation */
   size += sizeof(lv2dynparam_memory_pool_handle);
 
-  for (i = 0 ; i < g_pools_count ; i++)
+  for (i = 0 ; i < memory_ptr->pools_count ; i++)
   {
-    if (size <= g_pools[i].size)
+    if (size <= memory_ptr->pools[i].size)
     {
-      LOG_DEBUG("Using chunk with size %u.", (unsigned int)g_pools[i].size);
-      data_ptr = lv2dynparam_memory_pool_allocate(g_pools[i].pool);
+      LOG_DEBUG("Using chunk with size %u.", (unsigned int)memory_ptr->pools[i].size);
+      data_ptr = lv2dynparam_memory_pool_allocate(memory_ptr->pools[i].pool);
       if (data_ptr == NULL)
       {
         LOG_DEBUG("lv2dynparam_memory_pool_allocate() failed.");
         return FALSE;
       }
 
-      *data_ptr = g_pools[i].pool;
+      *data_ptr = memory_ptr->pools[i].pool;
 
       return (data_ptr + 1);
     }

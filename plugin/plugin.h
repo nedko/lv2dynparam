@@ -33,12 +33,6 @@ typedef void * lv2dynparam_plugin_parameter;
 typedef void * lv2dynparam_plugin_group;
 
 BOOL
-lv2dynparam_plugin_init(
-  size_t max_alloc_size,
-  size_t prealloc_min,
-  size_t prealloc_max);
-
-BOOL
 lv2dynparam_plugin_instantiate(
   LV2_Handle instance,
   const char * root_group_name,

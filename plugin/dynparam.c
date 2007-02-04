@@ -55,27 +55,6 @@ void lv2dynparam_plugin_initialise()
   INIT_LIST_HEAD(&g_instances);
 }
 
-BOOL
-lv2dynparam_plugin_init(
-  size_t max_alloc_size,
-  size_t prealloc_min,
-  size_t prealloc_max)
-{
-  LOG_DEBUG("lv2dynparam_plugin_init() called.");
-
-  if (max_alloc_size < 4000)
-  {
-    max_alloc_size = 4000;
-  }
-
-  if (prealloc_min < 10)
-  {
-    prealloc_min = 10;
-  }
-
-  return lv2dynparam_memory_init(max_alloc_size, prealloc_min, prealloc_max);
-}
-
 void *
 get_lv2dynparam_plugin_extension_data(void)
 {
@@ -97,6 +76,8 @@ lv2dynparam_plugin_instantiate(
     ret = FALSE;
     goto exit;
   }
+
+  ret = lv2dynparam_memory_init(64 * 1024, 100, 1000, &instance_ptr->memory);
 
   instance_ptr->lv2instance = lv2instance;
 

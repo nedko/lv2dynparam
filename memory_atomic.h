@@ -72,16 +72,20 @@ lv2dynparam_memory_pool_deallocate(
   lv2dynparam_memory_pool_handle pool,
   void * data);
 
+typedef void * lv2dynparam_memory_handle;
+
 /* will sleep */
 BOOL
 lv2dynparam_memory_init(
   size_t max_size,
   size_t prealloc_min,
-  size_t prealloc_max);
+  size_t prealloc_max,
+  lv2dynparam_memory_handle * handle_ptr);
 
 /* will not sleep */
 void *
 lv2dynparam_memory_allocate(
+  lv2dynparam_memory_handle handle_ptr,
   size_t size);
 
 /* will not sleep */
@@ -90,7 +94,8 @@ lv2dynparam_memory_deallocate(
   void * data);
 
 void
-lv2dynparam_memory_uninit();
+lv2dynparam_memory_uninit(
+  lv2dynparam_memory_handle handle_ptr);
 
 #if 0
 { /* Adjust editor indent */

@@ -134,6 +134,10 @@ struct lv2dynparam_host_instance
 
   struct list_head realtime_to_ui_queue; /* protected by the audiolock */
   struct list_head ui_to_realtime_queue; /* protected by the audiolock */
+
+  lv2dynparam_memory_pool_handle groups_pool;
+  lv2dynparam_memory_pool_handle parameters_pool;
+  lv2dynparam_memory_pool_handle messages_pool;
 };
 
 BOOL

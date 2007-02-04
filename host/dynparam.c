@@ -29,9 +29,9 @@
 #include "host.h"
 #include "../audiolock.h"
 #include "../list.h"
+#include "memory_atomic.h"
 #include "dynparam_internal.h"
 #include "dynparam_host_callbacks.h"
-#include "dynparam_preallocate.h"
 
 #define LOG_LEVEL LOG_LEVEL_ERROR
 #include "../log.h"
@@ -77,8 +77,6 @@ lv2dynparam_host_add_synth(
 {
   struct lv2dynparam_host_instance * instance_ptr;
 
-  lv2dynparam_preallocate();
-
   instance_ptr = malloc(sizeof(struct lv2dynparam_host_instance));
   if (instance_ptr == NULL)
   {
@@ -94,11 +92,38 @@ lv2dynparam_host_add_synth(
     goto fail_free;
   }
 
+  if (!lv2dynparam_memory_pool_create(
+        sizeof(struct lv2dynparam_host_group),
+        100,
+        1000,
+        &instance_ptr->groups_pool))
+  {
+    goto fail_destroy_lock;
+  }
+
+  if (!lv2dynparam_memory_pool_create(
+        sizeof(struct lv2dynparam_host_parameter),
+        100,
+        1000,
+        &instance_ptr->parameters_pool))
+  {
+    goto fail_destroy_groups_pool;
+  }
+
+  if (!lv2dynparam_memory_pool_create(
+        sizeof(struct lv2dynparam_host_message),
+        100,
+        1000,
+        &instance_ptr->messages_pool))
+  {
+    goto fail_destroy_parameters_pool;
+  }
+
   instance_ptr->callbacks_ptr = lv2descriptor->extension_data(LV2DYNPARAM_URI);
   if (instance_ptr->callbacks_ptr == NULL)
   {
     /* Oh my! plugin does not support dynparam extension! This should be pre-checked by caller! */
-    goto fail_destroy_lock;
+    goto fail_destroy_messages_pool;
   }
 
   INIT_LIST_HEAD(&instance_ptr->realtime_to_ui_queue);
@@ -119,6 +144,15 @@ lv2dynparam_host_add_synth(
   *instance_handle_ptr = (lv2dynparam_host_instance)instance_ptr;
 
   return 1;
+
+fail_destroy_messages_pool:
+  lv2dynparam_memory_pool_destroy(instance_ptr->messages_pool);
+
+fail_destroy_parameters_pool:
+  lv2dynparam_memory_pool_destroy(instance_ptr->parameters_pool);
+
+fail_destroy_groups_pool:
+  lv2dynparam_memory_pool_destroy(instance_ptr->groups_pool);
 
 fail_destroy_lock:
   audiolock_destroy(instance_ptr->lock);
@@ -451,7 +485,7 @@ lv2dynparam_host_realtime_run(
        LOG_ERROR("Message of unknown type %u received", message_ptr->message_type);
      }
 
-    lv2dynparam_put_unused_message(message_ptr);
+    lv2dynparam_memory_pool_deallocate(instance_ptr->messages_pool, message_ptr);
   }
 
   audiolock_leave_audio(instance_ptr->lock);
@@ -557,7 +591,7 @@ dynparam_parameter_boolean_change(
 
   LOG_DEBUG("\"%s\" changed to \"%s\"", parameter_ptr->name, value ? "TRUE" : "FALSE");
 
-  message_ptr = lv2dynparam_get_unused_message_may_block();
+  message_ptr = lv2dynparam_memory_pool_allocate_sleepy(instance_ptr->messages_pool);
 
   parameter_ptr->data.boolean = value;
 
@@ -582,7 +616,7 @@ dynparam_parameter_float_change(
 
   LOG_DEBUG("\"%s\" changed to %f", parameter_ptr->name, value);
 
-  message_ptr = lv2dynparam_get_unused_message_may_block();
+  message_ptr = lv2dynparam_memory_pool_allocate_sleepy(instance_ptr->messages_pool);
 
   parameter_ptr->data.fpoint.value = value;
 

@@ -27,6 +27,7 @@
 #include "../lv2dynparam.h"
 #include "plugin.h"
 #include "../list.h"
+#include "../memory_atomic.h"
 #include "dynparam_internal.h"
 #define LOG_LEVEL LOG_LEVEL_DEBUG
 #include "../log.h"
@@ -50,7 +51,27 @@ static struct list_head g_instances;
 void lv2dynparam_plugin_initialise() __attribute__((constructor));
 void lv2dynparam_plugin_initialise()
 {
+  LOG_DEBUG("lv2dynparam_plugin_initialise() called");
   INIT_LIST_HEAD(&g_instances);
+}
+
+BOOL
+lv2dynparam_plugin_init(
+  size_t max_alloc_size,
+  size_t prealloc_min,
+  size_t prealloc_max)
+{
+  if (max_alloc_size < 4000)
+  {
+    max_alloc_size = 4000;
+  }
+
+  if (prealloc_min < 10)
+  {
+    prealloc_min = 10;
+  }
+
+  return lv2dynparam_memory_init(max_alloc_size, prealloc_min, prealloc_max);
 }
 
 void *

@@ -29,6 +29,7 @@
 #include "../lv2dynparam.h"
 #include "plugin.h"
 #include "../list.h"
+#include "../memory_atomic.h"
 #include "dynparam_internal.h"
 
 //#define LOG_LEVEL LOG_LEVEL_DEBUG
@@ -451,8 +452,7 @@ lv2dynparam_plugin_param_enum_add(
     goto fail;
   }
 
-  /* FIXME: don't sleep */
-  values = malloc(values_count * sizeof(char *));
+  values = lv2dynparam_memory_allocate(values_count * sizeof(char *));
   if (values == NULL)
   {
     goto fail;
@@ -462,17 +462,16 @@ lv2dynparam_plugin_param_enum_add(
   {
     value_size = strlen(values_ptr_ptr[i]);
 
-    /* FIXME: don't sleep */
-    values[i] = malloc(value_size);
+    values[i] = lv2dynparam_memory_allocate(value_size);
     if (values[i] == NULL)
     {
       while (i > 0)
       {
         i--;
-        free(values[i]);
+        lv2dynparam_memory_deallocate(values[i]);
       }
 
-      free(values);
+      lv2dynparam_memory_deallocate(values);
 
       goto fail;
     }
@@ -514,10 +513,10 @@ lv2dynparam_plugin_param_enum_add(
 
       for (i = 0 ; i < param_ptr->data.enumeration.values_count ; i++)
       {
-        free(param_ptr->data.enumeration.values[i]);
+        lv2dynparam_memory_deallocate(param_ptr->data.enumeration.values[i]);
       }
 
-      free(param_ptr->data.enumeration.values);
+      lv2dynparam_memory_deallocate(param_ptr->data.enumeration.values);
 
       /* update parameter data... */
       param_ptr->data.enumeration.values = values;
@@ -568,10 +567,10 @@ lv2dynparam_plugin_param_enum_add(
 fail_free_values:
   for (i = 0 ; i < values_count ; i++)
   {
-    free(values[i]);
+    lv2dynparam_memory_deallocate(values[i]);
   }
 
-  free(values);
+  lv2dynparam_memory_deallocate(values);
 
 fail:
   return FALSE;

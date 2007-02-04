@@ -46,7 +46,7 @@ void
 lv2dynparam_memory_pool_destroy(
   lv2dynparam_memory_pool_handle pool);
 
-/* will sleep */
+/* may sleep */
 void
 lv2dynparam_memory_pool_sleepy(
   lv2dynparam_memory_pool_handle pool);
@@ -56,11 +56,41 @@ void *
 lv2dynparam_memory_pool_allocate(
   lv2dynparam_memory_pool_handle pool);
 
+/* may sleep, returns NULL if no memory is available */
+void *
+lv2dynparam_memory_pool_allocate(
+  lv2dynparam_memory_pool_handle pool);
+
+/* may sleep */
+void *
+lv2dynparam_memory_pool_allocate_sleepy(
+  lv2dynparam_memory_pool_handle pool);
+
 /* will not sleep */
 void
 lv2dynparam_memory_pool_deallocate(
   lv2dynparam_memory_pool_handle pool,
   void * data);
+
+/* will sleep */
+BOOL
+lv2dynparam_memory_init(
+  size_t max_size,
+  size_t prealloc_min,
+  size_t prealloc_max);
+
+/* will not sleep */
+void *
+lv2dynparam_memory_allocate(
+  size_t size);
+
+/* will not sleep */
+void
+lv2dynparam_memory_deallocate(
+  void * data);
+
+void
+lv2dynparam_memory_uninit();
 
 #if 0
 { /* Adjust editor indent */

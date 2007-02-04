@@ -82,6 +82,7 @@ lv2dynparam_plugin_group_new(
   BOOL ret;
   struct lv2dynparam_plugin_group * group_ptr;
 
+  /* FIXME: don't sleep */
   group_ptr = malloc(sizeof(struct lv2dynparam_plugin_group));
   if (group_ptr == NULL)
   {

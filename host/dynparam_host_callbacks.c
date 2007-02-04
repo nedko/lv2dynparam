@@ -31,9 +31,9 @@
 #include "host.h"
 #include "../audiolock.h"
 #include "../list.h"
+#include "memory_atomic.h"
 #include "dynparam_internal.h"
 #include "dynparam_host_callbacks.h"
-#include "dynparam_preallocate.h"
 
 //#define LOG_LEVEL LOG_LEVEL_DEBUG
 #include "../log.h"
@@ -60,7 +60,7 @@ lv2dynparam_host_group_appear(
     goto fail;
   }
 
-  group_ptr = lv2dynparam_get_unused_group();
+  group_ptr = lv2dynparam_memory_pool_allocate(instance_ptr->groups_pool);
   if (group_ptr == NULL)
   {
     /* we are not lucky enough, plugin will retry later */
@@ -122,7 +122,7 @@ lv2dynparam_host_parameter_appear(
 
   group_ptr = (struct lv2dynparam_host_group *)group_host_context;
 
-  param_ptr = lv2dynparam_get_unused_parameter();
+  param_ptr = lv2dynparam_memory_pool_allocate(instance_ptr->parameters_pool);
   if (param_ptr == NULL)
   {
     return FALSE;
@@ -143,7 +143,7 @@ lv2dynparam_host_parameter_appear(
   {
     LOG_WARNING("Ignoring parameter of unknown type \"%s\"", param_ptr->type_uri);
 
-    lv2dynparam_put_unused_parameter(param_ptr);
+    lv2dynparam_memory_pool_deallocate(instance_ptr->parameters_pool, param_ptr);
 
     *parameter_host_context = NULL;
 
@@ -206,9 +206,6 @@ lv2dynparam_host_parameter_appear(
   *parameter_host_context = param_ptr;
 
   return TRUE;
-
-fail:
-  return FALSE;
 }
 
 #define param_ptr ((struct lv2dynparam_host_parameter *)parameter_host_context)

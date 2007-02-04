@@ -27,6 +27,7 @@
 #include "types.h"
 #include "memory_atomic.h"
 #include "list.h"
+//#define LOG_LEVEL LOG_LEVEL_DEBUG
 #include "log.h"
 
 struct lv2dynparam_memory_pool
@@ -184,7 +185,7 @@ lv2dynparam_memory_pool_allocate_sleepy(
 }
 
 /* max alloc is DATA_MIN * (2 ^ POOLS_COUNT) - DATA_SUB */
-#define DATA_MIN       1000
+#define DATA_MIN       1024
 #define DATA_SUB       100      /* alloc slightly smaller chunks in hope to not allocating additional page for control data */
 
 static struct lv2dynparam_memory_pool_generic
@@ -203,6 +204,10 @@ lv2dynparam_memory_init(
 {
   size_t i;
   size_t size;
+
+  LOG_DEBUG("lv2dynparam_memory_init() called.");
+
+  assert(g_pools == NULL);      /* multiple initialization calls? */
 
   size = DATA_MIN;
   g_pools_count = 1;
@@ -258,12 +263,16 @@ lv2dynparam_memory_uninit()
 {
   unsigned int i;
 
+  LOG_DEBUG("lv2dynparam_memory_uninit() called.");
+
   for (i = 0 ; i < g_pools_count ; i++)
   {
     lv2dynparam_memory_pool_destroy(g_pools[i].pool);
   }
 
   free(g_pools);
+
+  g_pools = NULL;
 }
 
 void *
@@ -272,6 +281,8 @@ lv2dynparam_memory_allocate(
 {
   lv2dynparam_memory_pool_handle * data_ptr;
   size_t i;
+
+  LOG_DEBUG("lv2dynparam_memory_allocate() called.");
 
   assert(g_pools != NULL);      /* lv2dynparam_memory_init() not called? */
 
@@ -282,7 +293,13 @@ lv2dynparam_memory_allocate(
   {
     if (size <= g_pools[i].size)
     {
+      LOG_DEBUG("Using chunk with size %u.", (unsigned int)g_pools[i].size);
       data_ptr = lv2dynparam_memory_pool_allocate(g_pools[i].pool);
+      if (data_ptr == NULL)
+      {
+        LOG_DEBUG("lv2dynparam_memory_pool_allocate() failed.");
+        return FALSE;
+      }
 
       *data_ptr = g_pools[i].pool;
 
@@ -300,6 +317,6 @@ lv2dynparam_memory_deallocate(
   void * data)
 {
   lv2dynparam_memory_pool_deallocate(
-    *(lv2dynparam_memory_pool_handle *)data,
+    *((lv2dynparam_memory_pool_handle *)data -1),
     (lv2dynparam_memory_pool_handle *)data - 1);
 }

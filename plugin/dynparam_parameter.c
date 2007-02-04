@@ -455,6 +455,7 @@ lv2dynparam_plugin_param_enum_add(
   values = lv2dynparam_memory_allocate(values_count * sizeof(char *));
   if (values == NULL)
   {
+    LOG_DEBUG("Failed to allocate memory for enum array");
     goto fail;
   }
 
@@ -462,12 +463,16 @@ lv2dynparam_plugin_param_enum_add(
   {
     value_size = strlen(values_ptr_ptr[i]);
 
+    LOG_DEBUG("Allocating memory for enum array entry at index %u", i);
     values[i] = lv2dynparam_memory_allocate(value_size);
     if (values[i] == NULL)
     {
+      LOG_DEBUG("Failed to allocate memory for enum array entry");
+
       while (i > 0)
       {
         i--;
+        LOG_DEBUG("Deallocating memory for enum array entry at index %u", i);
         lv2dynparam_memory_deallocate(values[i]);
       }
 

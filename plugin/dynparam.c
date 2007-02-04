@@ -29,7 +29,7 @@
 #include "../list.h"
 #include "../memory_atomic.h"
 #include "dynparam_internal.h"
-#define LOG_LEVEL LOG_LEVEL_DEBUG
+//#define LOG_LEVEL LOG_LEVEL_DEBUG
 #include "../log.h"
 
 static struct lv2dynparam_plugin_callbacks g_lv2dynparam_plugin_callbacks =
@@ -61,6 +61,8 @@ lv2dynparam_plugin_init(
   size_t prealloc_min,
   size_t prealloc_max)
 {
+  LOG_DEBUG("lv2dynparam_plugin_init() called.");
+
   if (max_alloc_size < 4000)
   {
     max_alloc_size = 4000;

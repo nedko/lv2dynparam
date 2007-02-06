@@ -36,11 +36,13 @@
 #include "../log.h"
 
 void
-lv2dynparam_plugin_parameter_free(struct lv2dynparam_plugin_parameter * param_ptr)
+lv2dynparam_plugin_parameter_free(
+  struct lv2dynparam_plugin_instance * instance_ptr,
+  struct lv2dynparam_plugin_parameter * param_ptr)
 {
   LOG_DEBUG("Freeing parameter \"%s\"", param_ptr->name);
 
-  free(param_ptr);
+  lv2dynparam_plugin_group_free(instance_ptr, instance_ptr->parameters_pool);
 }
 
 #define parameter_ptr ((struct lv2dynparam_plugin_parameter *)parameter)
@@ -291,8 +293,7 @@ lv2dynparam_plugin_param_boolean_add(
     }
   }
 
-  /* FIXME: don't sleep */
-  param_ptr = malloc(sizeof(struct lv2dynparam_plugin_parameter));
+  param_ptr = lv2dynparam_memory_pool_allocate(instance_ptr->parameters_pool);
   if (param_ptr == NULL)
   {
     return FALSE;
@@ -388,8 +389,7 @@ lv2dynparam_plugin_param_float_add(
     }
   }
 
-  /* FIXME: don't sleep */
-  param_ptr = malloc(sizeof(struct lv2dynparam_plugin_parameter));
+  param_ptr = lv2dynparam_memory_pool_allocate(instance_ptr->parameters_pool);
   if (param_ptr == NULL)
   {
     return FALSE;
@@ -538,8 +538,7 @@ lv2dynparam_plugin_param_enum_add(
     }
   }
 
-  /* FIXME: don't sleep */
-  param_ptr = malloc(sizeof(struct lv2dynparam_plugin_parameter));
+  param_ptr = lv2dynparam_memory_pool_allocate(instance_ptr->parameters_pool);
   if (param_ptr == NULL)
   {
     goto fail_free_values;
@@ -591,7 +590,7 @@ lv2dynparam_plugin_param_remove(
   {
     instance_ptr->pending--;
     list_del(&parameter_ptr->siblings);
-    lv2dynparam_plugin_parameter_free(parameter_ptr);
+    lv2dynparam_plugin_parameter_free(instance_ptr, parameter_ptr);
     return TRUE;
   }
 

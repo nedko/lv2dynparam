@@ -83,8 +83,7 @@ lv2dynparam_plugin_group_new(
   BOOL ret;
   struct lv2dynparam_plugin_group * group_ptr;
 
-  /* FIXME: don't sleep */
-  group_ptr = malloc(sizeof(struct lv2dynparam_plugin_group));
+  group_ptr = lv2dynparam_memory_pool_allocate(instance_ptr->groups_pool);
   if (group_ptr == NULL)
   {
     ret = FALSE;
@@ -104,7 +103,7 @@ lv2dynparam_plugin_group_new(
   return TRUE;
 
 free:
-  free(group_ptr);
+  lv2dynparam_memory_pool_deallocate(instance_ptr->groups_pool, group_ptr);
 
 exit:
   return ret;
@@ -112,6 +111,7 @@ exit:
 
 void
 lv2dynparam_plugin_group_clean(
+  struct lv2dynparam_plugin_instance * instance_ptr,
   struct lv2dynparam_plugin_group * group_ptr)
 {
   struct list_head * node_ptr;
@@ -125,7 +125,7 @@ lv2dynparam_plugin_group_clean(
     node_ptr = group_ptr->child_groups.next;
     child_group_ptr = list_entry(node_ptr, struct lv2dynparam_plugin_group, siblings);
     list_del(node_ptr);
-    lv2dynparam_plugin_group_free(child_group_ptr);
+    lv2dynparam_plugin_group_free(instance_ptr, child_group_ptr);
   }
 
   LOG_DEBUG("Cleaning parameters...");
@@ -135,17 +135,18 @@ lv2dynparam_plugin_group_clean(
     node_ptr = group_ptr->child_parameters.next;
     child_param_ptr = list_entry(node_ptr, struct lv2dynparam_plugin_parameter, siblings);
     list_del(node_ptr);
-    lv2dynparam_plugin_parameter_free(child_param_ptr);
+    lv2dynparam_plugin_parameter_free(instance_ptr, child_param_ptr);
   }
 }
 
 void
 lv2dynparam_plugin_group_free(
+  struct lv2dynparam_plugin_instance * instance_ptr,
   struct lv2dynparam_plugin_group * group_ptr)
 {
-  lv2dynparam_plugin_group_clean(group_ptr);
+  lv2dynparam_plugin_group_clean(instance_ptr, group_ptr);
   LOG_DEBUG("Freeing group \"%s\"", group_ptr->name);
-  free(group_ptr);
+  lv2dynparam_memory_pool_deallocate(instance_ptr->groups_pool, group_ptr);
 }
 
 void

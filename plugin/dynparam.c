@@ -77,7 +77,35 @@ lv2dynparam_plugin_instantiate(
     goto exit;
   }
 
-  ret = lv2dynparam_memory_init(64 * 1024, 100, 1000, &instance_ptr->memory);
+  if (!lv2dynparam_memory_init(
+        64 * 1024,
+        100,
+        1000,
+        &instance_ptr->memory))
+  {
+    ret = FALSE;
+    goto free_instance;
+  }
+
+  if (!lv2dynparam_memory_pool_create(
+        sizeof(struct lv2dynparam_plugin_group),
+        100,
+        1000,
+        &instance_ptr->groups_pool))
+  {
+    ret = FALSE;
+    goto free_uninit_memory;
+  }
+
+  if (!lv2dynparam_memory_pool_create(
+        sizeof(struct lv2dynparam_plugin_parameter),
+        100,
+        1000,
+        &instance_ptr->parameters_pool))
+  {
+    ret = FALSE;
+    goto free_destroy_groups_pool;
+  }
 
   instance_ptr->lv2instance = lv2instance;
 
@@ -89,7 +117,7 @@ lv2dynparam_plugin_instantiate(
         LV2DYNPARAM_GROUP_TYPE_GENERIC_URI))
   {
     ret = FALSE;
-    goto free;
+    goto free_destroy_parameters_pool;
   }
 
   list_add_tail(&instance_ptr->siblings, &g_instances);
@@ -103,7 +131,13 @@ lv2dynparam_plugin_instantiate(
   ret = TRUE;
   goto exit;
 
-free:
+free_destroy_parameters_pool:
+
+free_destroy_groups_pool:
+
+free_uninit_memory:
+
+free_instance:
   free(instance_ptr);
 
 exit:
@@ -150,6 +184,9 @@ lv2dynparam_plugin_cleanup(
   lv2dynparam_plugin_instance instance_handle)
 {
   list_del(&instance_ptr->siblings);
-  lv2dynparam_plugin_group_clean(&instance_ptr->root_group);
+  lv2dynparam_plugin_group_clean(instance_ptr, &instance_ptr->root_group);
+  lv2dynparam_memory_pool_destroy(instance_ptr->parameters_pool);
+  lv2dynparam_memory_pool_destroy(instance_ptr->groups_pool);
+  lv2dynparam_memory_uninit(instance_ptr->memory);
   free(instance_ptr);
 }

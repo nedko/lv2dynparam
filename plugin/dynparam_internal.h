@@ -122,6 +122,9 @@ struct lv2dynparam_plugin_instance
   void * host_context;
 
   unsigned int pending;
+
+  lv2dynparam_memory_pool_handle groups_pool;
+  lv2dynparam_memory_pool_handle parameters_pool;
 };
 
 unsigned char
@@ -140,10 +143,12 @@ lv2dynparam_plugin_group_init(
 
 void
 lv2dynparam_plugin_group_clean(
+  struct lv2dynparam_plugin_instance * instance_ptr,
   struct lv2dynparam_plugin_group * group_ptr);
 
 void
 lv2dynparam_plugin_group_free(
+  struct lv2dynparam_plugin_instance * instance_ptr,
   struct lv2dynparam_plugin_group * group_ptr);
 
 void
@@ -163,6 +168,7 @@ lv2dynparam_plugin_group_get_name(
 
 void
 lv2dynparam_plugin_parameter_free(
+  struct lv2dynparam_plugin_instance * instance_ptr,
   struct lv2dynparam_plugin_parameter * param_ptr);
 
 void

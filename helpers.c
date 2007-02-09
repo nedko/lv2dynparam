@@ -26,17 +26,25 @@
 #include "types.h"
 #include "memory_atomic.h"
 #include "helpers.h"
+
+//#define LOG_LEVEL LOG_LEVEL_DEBUG
 #include "log.h"
 
 char **
 lv2dynparam_enum_duplicate(
   lv2dynparam_memory_handle memory,
-  const char ** values_ptr_ptr,
+  const char * const * values_ptr_ptr,
   unsigned int values_count)
 {
   unsigned int i;
   char ** values;
   size_t value_size;
+
+  LOG_DEBUG("Duplicating enum array of %u elements", values_count);
+  for (i = 0 ; i < values_count ; i++)
+  {
+    LOG_DEBUG("\"%s\"", values_ptr_ptr[i]);
+  }
 
   values = lv2dynparam_memory_allocate(memory, values_count * sizeof(char *));
   if (values == NULL)
@@ -47,7 +55,7 @@ lv2dynparam_enum_duplicate(
 
   for (i = 0 ; i < values_count ; i++)
   {
-    value_size = strlen(values_ptr_ptr[i]);
+    value_size = strlen(values_ptr_ptr[i]) + 1;
 
     LOG_DEBUG("Allocating memory for enum array entry at index %u", i);
     values[i] = lv2dynparam_memory_allocate(memory, value_size);
@@ -68,6 +76,12 @@ lv2dynparam_enum_duplicate(
     }
 
     memcpy(values[i], values_ptr_ptr[i], value_size);
+  }
+
+  LOG_DEBUG("Duplicated enum array of %u elements", values_count);
+  for (i = 0 ; i < values_count ; i++)
+  {
+    LOG_DEBUG("\"%s\"", values[i]);
   }
 
   return values;

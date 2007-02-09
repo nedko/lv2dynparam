@@ -41,6 +41,16 @@ lv2dynparam_plugin_parameter_free(
 {
   LOG_DEBUG("Freeing parameter \"%s\"", param_ptr->name);
 
+  switch (param_ptr->type)
+  {
+  case LV2DYNPARAM_PARAMETER_TYPE_ENUM:
+    lv2dynparam_enum_free(
+      instance_ptr->memory,
+      param_ptr->data.enumeration.values,
+      param_ptr->data.enumeration.values_count);
+    return;
+  }
+
   lv2dynparam_plugin_group_free(instance_ptr, instance_ptr->parameters_pool);
 }
 
@@ -125,6 +135,9 @@ lv2dynparam_plugin_parameter_get_value(
     return;
   case LV2DYNPARAM_PARAMETER_TYPE_BOOLEAN:
     *value_buffer = &parameter_ptr->data.boolean;
+    return;
+  case LV2DYNPARAM_PARAMETER_TYPE_ENUM:
+    *value_buffer = &parameter_ptr->data.enumeration.selected_value;
     return;
   }
 }
@@ -438,10 +451,10 @@ lv2dynparam_plugin_param_enum_add(
 
   LOG_DEBUG("lv2dynparam_plugin_param_enum_add() called for \"%s\"", name);
 
-/*   for (i = 0 ; i < values_count ; i++) */
-/*   { */
-/*     LOG_DEBUG("[%u] possible value \"%s\"%s", i, values_ptr_ptr[i], i == initial_value_index ? " SELECTED" : ""); */
-/*   } */
+  for (i = 0 ; i < values_count ; i++)
+  {
+    LOG_DEBUG("[%u] possible value \"%s\"%s", i, values_ptr_ptr[i], i == initial_value_index ? " SELECTED" : "");
+  }
 
   name_size = strlen(name) + 1;
   if (name_size >= LV2DYNPARAM_MAX_STRING_SIZE)

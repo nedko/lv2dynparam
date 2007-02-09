@@ -29,4 +29,10 @@ lv2dynparam_enum_duplicate(
   const char * const * values,
   unsigned int values_count);
 
+void
+lv2dynparam_enum_free(
+  lv2dynparam_memory_handle memory,
+  char ** values,
+  unsigned int values_count);
+
 #endif /* #ifndef HELPERS_H__E8B13390_50AB_495C_8AA3_BE4F644C13A8__INCLUDED */

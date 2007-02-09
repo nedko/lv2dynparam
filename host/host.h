@@ -142,6 +142,25 @@ dynparam_parameter_float_disappeared(
 
 /* callback called from ui thread */
 void
+dynparam_parameter_enum_appeared(
+  lv2dynparam_host_parameter parameter_handle,
+  void * instance_ui_context,
+  void * group_ui_context,
+  const char * parameter_name,
+  unsigned int selected_value,
+  const char * const * values,
+  unsigned int values_count,
+  void ** parameter_ui_context);
+
+/* callback called from ui thread */
+void
+dynparam_parameter_enum_disappeared(
+  void * instance_ui_context,
+  void * parent_group_ui_context,
+  void * parameter_ui_context);
+
+/* callback called from ui thread */
+void
 dynparam_parameter_boolean_changed(
   void * instance_ui_context,
   void * parameter_ui_context,

@@ -135,6 +135,8 @@ struct lv2dynparam_host_instance
   struct list_head realtime_to_ui_queue; /* protected by the audiolock */
   struct list_head ui_to_realtime_queue; /* protected by the audiolock */
 
+  lv2dynparam_memory_handle memory;
+
   lv2dynparam_memory_pool_handle groups_pool;
   lv2dynparam_memory_pool_handle parameters_pool;
   lv2dynparam_memory_pool_handle messages_pool;
@@ -151,5 +153,10 @@ lv2dynparam_host_group_pending_children_count_increment(
 void
 lv2dynparam_host_group_pending_children_count_decrement(
   struct lv2dynparam_host_group * group_ptr);
+
+void
+lv2dynparam_host_parameter_free(
+  struct lv2dynparam_host_instance * instance_ptr,
+  struct lv2dynparam_host_parameter * parameter_ptr);
 
 #endif /* #ifndef DYNPARAM_INTERNAL_H__86778596_B1A9_4BD7_A14A_BECBD5589468__INCLUDED */

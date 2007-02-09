@@ -86,3 +86,11 @@ lv2dynparam_enum_duplicate(
 
   return values;
 }
+
+void
+lv2dynparam_enum_free(
+  lv2dynparam_memory_handle memory,
+  char ** values,
+  unsigned int values_count)
+{
+}

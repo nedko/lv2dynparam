@@ -32,9 +32,28 @@
 #include "memory_atomic.h"
 #include "dynparam_internal.h"
 #include "dynparam_host_callbacks.h"
+#include "../helpers.h"
 
 #define LOG_LEVEL LOG_LEVEL_ERROR
 #include "../log.h"
+
+void
+lv2dynparam_host_parameter_free(
+  struct lv2dynparam_host_instance * instance_ptr,
+  struct lv2dynparam_host_parameter * parameter_ptr)
+{
+  switch (parameter_ptr->type)
+  {
+  case LV2DYNPARAM_PARAMETER_TYPE_ENUM:
+    lv2dynparam_enum_free(
+      instance_ptr->memory,
+      parameter_ptr->data.enumeration.values,
+      parameter_ptr->data.enumeration.values_count);
+    return;
+  }
+
+  lv2dynparam_memory_pool_deallocate(instance_ptr->parameters_pool, parameter_ptr);
+}
 
 BOOL
 lv2dynparam_host_map_type_uri(
@@ -49,6 +68,12 @@ lv2dynparam_host_map_type_uri(
   if (strcmp(parameter_ptr->type_uri, LV2DYNPARAM_PARAMETER_TYPE_FLOAT_URI) == 0)
   {
     parameter_ptr->type = LV2DYNPARAM_PARAMETER_TYPE_FLOAT;
+    return TRUE;
+  }
+
+  if (strcmp(parameter_ptr->type_uri, LV2DYNPARAM_PARAMETER_TYPE_ENUM_URI) == 0)
+  {
+    parameter_ptr->type = LV2DYNPARAM_PARAMETER_TYPE_ENUM;
     return TRUE;
   }
 
@@ -119,11 +144,20 @@ lv2dynparam_host_add_synth(
     goto fail_destroy_parameters_pool;
   }
 
+  if (!lv2dynparam_memory_init(
+        64 * 1024,
+        100,
+        1000,
+        &instance_ptr->memory))
+  {
+    goto fail_destroy_messages_pool;
+  }
+
   instance_ptr->callbacks_ptr = lv2descriptor->extension_data(LV2DYNPARAM_URI);
   if (instance_ptr->callbacks_ptr == NULL)
   {
     /* Oh my! plugin does not support dynparam extension! This should be pre-checked by caller! */
-    goto fail_destroy_messages_pool;
+    goto fail_uninit_memory;
   }
 
   INIT_LIST_HEAD(&instance_ptr->realtime_to_ui_queue);
@@ -138,12 +172,15 @@ lv2dynparam_host_add_synth(
         instance_ptr))
   {
     LOG_ERROR("lv2dynparam host_attach() failed.");
-    goto fail_destroy_lock;
+    goto fail_uninit_memory;
   }
 
   *instance_handle_ptr = (lv2dynparam_host_instance)instance_ptr;
 
   return 1;
+
+fail_uninit_memory:
+  lv2dynparam_memory_uninit(instance_ptr->memory);
 
 fail_destroy_messages_pool:
   lv2dynparam_memory_pool_destroy(instance_ptr->messages_pool);
@@ -272,6 +309,20 @@ lv2dynparam_host_notify_parameter_appeared(
       parameter_ptr->data.fpoint.max,
       &parameter_ptr->ui_context);
     break;
+  case LV2DYNPARAM_PARAMETER_TYPE_ENUM:
+    dynparam_parameter_enum_appeared(
+      parameter_ptr,
+      instance_ptr->instance_ui_context,
+      parameter_ptr->group_ptr->ui_context,
+      parameter_ptr->name,
+      parameter_ptr->data.enumeration.selected_value,
+      (const char * const *)parameter_ptr->data.enumeration.values,
+      parameter_ptr->data.enumeration.values_count,
+      &parameter_ptr->ui_context);
+    break;
+  default:
+    assert(0);                  /* unknown parameter type, should be ignored in host callback */
+    break;
   }
 }
 
@@ -294,6 +345,14 @@ lv2dynparam_host_notify_parameter_disappeared(
       parameter_ptr->group_ptr->ui_context,
       parameter_ptr->ui_context);
     break;
+  case LV2DYNPARAM_PARAMETER_TYPE_ENUM:
+    dynparam_parameter_enum_disappeared(
+      instance_ptr->instance_ui_context,
+      parameter_ptr->group_ptr->ui_context,
+      parameter_ptr->ui_context);
+    break;
+  default:
+    assert(0);                  /* unknown parameter type, should be ignored in host callback and assert on appear */
   }
 }
 
@@ -375,6 +434,7 @@ lv2dynparam_host_notify(
       parameter_ptr->pending_state = LV2DYNPARAM_PENDING_NOTHING;
       lv2dynparam_host_group_pending_children_count_decrement(group_ptr);
       list_del(&parameter_ptr->siblings);
+      lv2dynparam_host_parameter_free(instance_ptr, parameter_ptr);
       break;
     default:
       LOG_ERROR("unknown pending_state %u of parameter \"%s\"", parameter_ptr->pending_state, parameter_ptr->name);

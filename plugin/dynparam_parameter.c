@@ -20,9 +20,7 @@
  *
  *****************************************************************************/
 
-#include <stdlib.h>
 #include <string.h>
-/* #include <stdio.h> */
 #include <assert.h>
 
 #include "../lv2.h"
@@ -31,6 +29,7 @@
 #include "../list.h"
 #include "../memory_atomic.h"
 #include "dynparam_internal.h"
+#include "../helpers.h"
 
 //#define LOG_LEVEL LOG_LEVEL_DEBUG
 #include "../log.h"
@@ -434,7 +433,6 @@ lv2dynparam_plugin_param_enum_add(
   struct lv2dynparam_plugin_group * group_ptr;
   struct list_head * node_ptr;
   size_t name_size;
-  size_t value_size;
   unsigned int i;
   char ** values;
 
@@ -452,36 +450,11 @@ lv2dynparam_plugin_param_enum_add(
     goto fail;
   }
 
-  values = lv2dynparam_memory_allocate(instance_ptr->memory, values_count * sizeof(char *));
+  values = lv2dynparam_enum_duplicate(instance_ptr->memory, values_ptr_ptr, values_count);
   if (values == NULL)
   {
-    LOG_DEBUG("Failed to allocate memory for enum array");
+    LOG_DEBUG("Failed to duplicate enum array");
     goto fail;
-  }
-
-  for (i = 0 ; i < values_count ; i++)
-  {
-    value_size = strlen(values_ptr_ptr[i]);
-
-    LOG_DEBUG("Allocating memory for enum array entry at index %u", i);
-    values[i] = lv2dynparam_memory_allocate(instance_ptr->memory, value_size);
-    if (values[i] == NULL)
-    {
-      LOG_DEBUG("Failed to allocate memory for enum array entry");
-
-      while (i > 0)
-      {
-        i--;
-        LOG_DEBUG("Deallocating memory for enum array entry at index %u", i);
-        lv2dynparam_memory_deallocate(values[i]);
-      }
-
-      lv2dynparam_memory_deallocate(values);
-
-      goto fail;
-    }
-
-    memcpy(values[i], values_ptr_ptr[i], value_size);
   }
 
   if (group == NULL)

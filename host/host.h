@@ -180,4 +180,11 @@ dynparam_parameter_float_change(
   lv2dynparam_host_parameter parameter_handle,
   float value);
 
+/* called from ui thread, to change boolean parameter value */
+void
+dynparam_parameter_enum_change(
+  lv2dynparam_host_instance instance,
+  lv2dynparam_host_parameter parameter_handle,
+  unsigned int selected_index_value);
+
 #endif /* #ifndef DYNPARAM_H__5090F477_0BE7_439F_BF1D_F2EB78822760__INCLUDED */

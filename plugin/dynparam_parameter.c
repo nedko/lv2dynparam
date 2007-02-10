@@ -191,6 +191,14 @@ lv2dynparam_plugin_parameter_change(
   case LV2DYNPARAM_PARAMETER_TYPE_BOOLEAN:
     parameter_ptr->plugin_callback.boolean(parameter_ptr->plugin_callback_context, parameter_ptr->data.boolean);
     return;
+  case LV2DYNPARAM_PARAMETER_TYPE_ENUM:
+    parameter_ptr->plugin_callback.enumeration(
+      parameter_ptr->plugin_callback_context,
+      parameter_ptr->data.enumeration.values[parameter_ptr->data.enumeration.selected_value],
+      parameter_ptr->data.enumeration.selected_value);
+    return;
+  default:
+    assert(0);
   }
 }
 

@@ -29,7 +29,7 @@
 #include "../list.h"
 #include "plugin.h"
 #include "../memory_atomic.h"
-#include "dynparam_internal.h"
+#include "internal.h"
 #define LOG_LEVEL LOG_LEVEL_ERROR
 #include "../log.h"
 

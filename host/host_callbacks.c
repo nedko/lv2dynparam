@@ -31,9 +31,9 @@
 #include "host.h"
 #include "../audiolock.h"
 #include "../list.h"
-#include "memory_atomic.h"
-#include "dynparam_internal.h"
-#include "dynparam_host_callbacks.h"
+#include "../memory_atomic.h"
+#include "internal.h"
+#include "host_callbacks.h"
 #include "../helpers.h"
 
 //#define LOG_LEVEL LOG_LEVEL_DEBUG

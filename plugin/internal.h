@@ -197,7 +197,7 @@ lv2dynparam_plugin_parameter_get_range(
   void ** value_min_buffer,
   void ** value_max_buffer);
 
-void
+unsigned char
 lv2dynparam_plugin_parameter_change(
   lv2dynparam_parameter_handle parameter);
 

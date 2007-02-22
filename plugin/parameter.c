@@ -169,7 +169,7 @@ lv2dynparam_plugin_parameter_get_range(
   }
 }
 
-void
+unsigned char
 lv2dynparam_plugin_parameter_change(
   lv2dynparam_parameter_handle parameter)
 {
@@ -178,28 +178,53 @@ lv2dynparam_plugin_parameter_change(
   switch (parameter_ptr->type)
   {
   case LV2DYNPARAM_PARAMETER_TYPE_FLOAT:
-    parameter_ptr->plugin_callback.fpoint(parameter_ptr->plugin_callback_context, parameter_ptr->data.fpoint.value);
-    return;
+    if (!parameter_ptr->plugin_callback.fpoint(
+          parameter_ptr->plugin_callback_context,
+          parameter_ptr->data.fpoint.value))
+    {
+      return FALSE;
+    }
+
+    return TRUE;
+
   case LV2DYNPARAM_PARAMETER_TYPE_INT:
-    return;
+    return TRUE;
+
   case LV2DYNPARAM_PARAMETER_TYPE_NOTE:
-    return;
+    return TRUE;
+
   case LV2DYNPARAM_PARAMETER_TYPE_STRING:
-    return;
+    return TRUE;
+
   case LV2DYNPARAM_PARAMETER_TYPE_FILENAME:
-    return;
+    return TRUE;
+
   case LV2DYNPARAM_PARAMETER_TYPE_BOOLEAN:
-    parameter_ptr->plugin_callback.boolean(parameter_ptr->plugin_callback_context, parameter_ptr->data.boolean);
-    return;
+    if (!parameter_ptr->plugin_callback.boolean(
+          parameter_ptr->plugin_callback_context,
+          parameter_ptr->data.boolean))
+    {
+      return FALSE;
+    }
+
+    return TRUE;
+
   case LV2DYNPARAM_PARAMETER_TYPE_ENUM:
-    parameter_ptr->plugin_callback.enumeration(
-      parameter_ptr->plugin_callback_context,
-      parameter_ptr->data.enumeration.values[parameter_ptr->data.enumeration.selected_value],
-      parameter_ptr->data.enumeration.selected_value);
-    return;
+    if (!parameter_ptr->plugin_callback.enumeration(
+          parameter_ptr->plugin_callback_context,
+          parameter_ptr->data.enumeration.values[parameter_ptr->data.enumeration.selected_value],
+          parameter_ptr->data.enumeration.selected_value))
+    {
+      return FALSE;
+    }
+
+    return TRUE;
+
   default:
     assert(0);
   }
+
+  return TRUE;
 }
 
 void

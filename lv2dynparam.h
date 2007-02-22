@@ -382,8 +382,12 @@ struct lv2dynparam_plugin_callbacks
    * Plugin implementation must not suspend execution (sleep/lock).
    *
    * @param parameter Parameter handle, as supplied by plugin
+   *
+   * @return Success status
+   * @retval Non-zero - success
+   * @retval Zero - error, try later
    */
-  void (*parameter_change)(
+  unsigned char (*parameter_change)(
     lv2dynparam_parameter_handle parameter);
 
   /**
@@ -405,8 +409,12 @@ struct lv2dynparam_plugin_callbacks
    * Plugin implementation must not suspend execution (sleep/lock).
    *
    * @param command Command handle, as supplied by plugin
+   *
+   * @return Success status
+   * @retval Non-zero - success
+   * @retval Zero - error, try later
    */
-  void (*command_execute)(
+  unsigned char (*command_execute)(
     lv2dynparam_command_handle command);
 };
 

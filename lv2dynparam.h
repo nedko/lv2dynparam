@@ -126,7 +126,7 @@ extern "C" {
 } /* Adjust editor indent */
 #endif
 
-#define LV2DYNPARAM_BASE_URI "http://home.gna.org/lv2dynparam/"
+#define LV2DYNPARAM_BASE_URI "http://home.gna.org/lv2dynparam/v1"
 
 /* URI of the LV2 extension defined in this file */
 #define LV2DYNPARAM_URI LV2DYNPARAM_BASE_URI

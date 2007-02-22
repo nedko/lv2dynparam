@@ -519,7 +519,6 @@ lv2dynparam_host_realtime_run(
   while (!list_empty(&instance_ptr->ui_to_realtime_queue))
   {
     node_ptr = instance_ptr->ui_to_realtime_queue.next;
-    list_del(node_ptr);
     message_ptr = list_entry(node_ptr, struct lv2dynparam_host_message, siblings);
 
     switch (message_ptr->message_type)
@@ -542,15 +541,22 @@ lv2dynparam_host_realtime_run(
         LOG_ERROR("Parameter change for parameter of unknown type %u received", parameter_ptr->type);
       }
 
-      instance_ptr->callbacks_ptr->parameter_change(parameter_ptr->param_handle);
+      if (!instance_ptr->callbacks_ptr->parameter_change(parameter_ptr->param_handle))
+      {
+        goto exit;
+      }
+
       break;
+
     default:
        LOG_ERROR("Message of unknown type %u received", message_ptr->message_type);
      }
 
+    list_del(node_ptr);
     lv2dynparam_memory_pool_deallocate(instance_ptr->messages_pool, message_ptr);
   }
 
+exit:
   audiolock_leave_audio(instance_ptr->lock);
 }
 

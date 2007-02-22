@@ -93,8 +93,8 @@ static struct lv2dynparam_host_callbacks g_lv2dynparam_host_callbacks =
   .command_disappear = lv2dynparam_host_command_disappear
 };
 
-int
-lv2dynparam_host_add_synth(
+BOOL
+lv2dynparam_host_attach(
   const LV2_Descriptor * lv2descriptor,
   LV2_Handle lv2instance,
   void * instance_ui_context,

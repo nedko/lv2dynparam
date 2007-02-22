@@ -1,8 +1,6 @@
 /* -*- Mode: C ; c-basic-offset: 2 -*- */
 /*****************************************************************************
  *
- *  lv2-dynparam.h - header file for using dynamic parameters in LV2 plugins
- *
  *  This work is in public domain.
  *
  *  This file is distributed in the hope that it will be useful,
@@ -14,101 +12,103 @@
  *
  *****************************************************************************/
 
-/*
- *  = Purpose=
+/**
+ * @file lv2dynparam.h
+ * @brief LV2 dynparam extension definition
  *
- *  The purpose of this extension is to allow plugin parameters appear
- *  and disappear as response of existing parameter changes (i.e. number
- *  of voices) or executing commands (i.e. "add new voice"). It also
- *  allows grouping of parameters and groups. Groups can be used for
- *  things like ADSR abstraction, i.e. group of 4 float parameters.
+ * @par Purpose
  *
- *  = Architectural overview =
+ * The purpose of this extension is to allow plugin parameters appear
+ * and disappear as response of existing parameter changes (i.e. number
+ * of voices) or executing commands (i.e. "add new voice"). It also
+ * allows grouping of parameters and groups. Groups can be used for
+ * things like ADSR abstraction, i.e. group of 4 float parameters.
  *
- *   Plugin notifies host for changes through callbacks. During
- *   initialization, plugin notifies host about initial groups,
- *   parameters and commands through same callbacks used for later
- *   notification. There are callbacks to notify host for group,
- *   parameter and command disappears.
+ * @par Architectural overview
  *
- *   Groups are containers of other groups, parameters and
- *   commands. Parameters and groups have URIs. Parameter URIs are
- *   used to describe type of parameter (i.e. boolean, integer,
- *   string, etc.). Parameters are as simple as possible. There is one
- *   predefined Group URI for "generic group" type, i.e. container
- *   that is just that - a container of other groups, parameters and
- *   commands. Other group types are just hints and ones that are
- *   unknown to host, can be looked as generic ones. Only generic
- *   groups can contain groups. Groups of other types can contain only
- *   parameters. There is always one, root group. Name of the root
- *   groop is expected to match name of the plugin.
+ * Plugin notifies host for changes through callbacks. During
+ * initialization, plugin notifies host about initial groups,
+ * parameters and commands through same callbacks used for later
+ * notification. There are callbacks to notify host for group,
+ * parameter and command disappears.
  *
- *  Groups, parameters and commands, have "name" containing short
- *  human readble description of object purpose.
+ * Groups are containers of other groups, parameters and
+ * commands. Parameters and groups have URIs. Parameter URIs are
+ * used to describe type of parameter (i.e. boolean, integer,
+ * string, etc.). Parameters are as simple as possible. There is one
+ * predefined Group URI for "generic group" type, i.e. container
+ * that is just that - a container of other groups, parameters and
+ * commands. Other group types are just hints and ones that are
+ * unknown to host, can be looked as generic ones. Only generic
+ * groups can contain groups. Groups of other types can contain only
+ * parameters. There is always one, root group. Name of the root
+ * groop is expected to match name of the plugin.
  *
- *  Parameter ports, are bidirectional. Parameters have values, and
- *  some of them (depending of type) - range. Data storage for
- *  current, min and max values is in plugin memory. Host gets
- *  pointers to that memory and accesses the data in type specific
- *  way.
+ * Groups, parameters and commands, have "name" containing short
+ * human readble description of object purpose.
  *
- *  When plugin decides to change parameter value or range (as
- *  response to command execution or other parameter value change), it
- *  notifies host through callback.
+ * Parameter ports, are bidirectional. Parameters have values, and
+ * some of them (depending of type) - range. Data storage for
+ * current, min and max values is in plugin memory. Host gets
+ * pointers to that memory and accesses the data in type specific
+ * way.
  *
- *  When host decides to change parameter value or execute command (as
- *  resoponse to user action, i.e. knob rotation/button press, or some
- *  kind of automation), it calls plugin callback. In case of
- *  parameter, it first changes the value in the plugin data storage
- *  for particular parameter. Host ensures that values being set are
- *  within current range (if range is defined for particular port
- *  type).
+ * When plugin decides to change parameter value or range (as
+ * response to command execution or other parameter value change), it
+ * notifies host through callback.
  *
- *  Apart from initialization (host_attach), plugin may call host
- *  callbacks only as response to command execution or parameter
- *  change notification (from host).
+ * When host decides to change parameter value or execute command (as
+ * resoponse to user action, i.e. knob rotation/button press, or some
+ * kind of automation), it calls plugin callback. In case of
+ * parameter, it first changes the value in the plugin data storage
+ * for particular parameter. Host ensures that values being set are
+ * within current range (if range is defined for particular port
+ * type).
  *
- *  Host serializes calls to plugin dynparam callbacks and the
- *  run/connect_port lv2 callbacks. Thus plugin does not need to take
- *  special measures for thread safety.  in callbacks called by host.
+ * Apart from initialization (host_attach), plugin may call host
+ * callbacks only as response to command execution or parameter
+ * change notification (from host).
  *
- *  Plugin can assume that host will never call dynamic parameter
- *  functions when lv2 plugin callbacks (like run and connect_port) are
- *  being called. I.e. calls are serialized, no need for locks in
- *  plugin. Plugin must not suspend execution (sleep/lock) while being
- *  called by host. If it needs to sleep to implement action requested
- *  by host, like allocation of data for new voice, the allocation
- *  should be done in background thread and when ready, transfered to
- *  the realtime code. During initialization (host_attach) plugin is
- *  allowed to sleep. Thus conventional memory allocation is allowed
- *  in host_attach.
+ * Host serializes calls to plugin dynparam callbacks and the
+ * run/connect_port lv2 callbacks. Thus plugin does not need to take
+ * special measures for thread safety.  in callbacks called by host.
  *
- *  = Intialization sequence =
+ * Plugin can assume that host will never call dynamic parameter
+ * functions when lv2 plugin callbacks (like run and connect_port) are
+ * being called. I.e. calls are serialized, no need for locks in
+ * plugin. Plugin must not suspend execution (sleep/lock) while being
+ * called by host. If it needs to sleep to implement action requested
+ * by host, like allocation of data for new voice, the allocation
+ * should be done in background thread and when ready, transfered to
+ * the realtime code. During initialization (host_attach) plugin is
+ * allowed to sleep. Thus conventional memory allocation is allowed
+ * in host_attach.
  *
- *  1. Host discovers whether plugin supports the extension by
- *     inspecting the RDF Turtle file.
- *  2. Host calls lv2 extension_data callback, plugin returns pointer
- *     to struct lv2dynparam_plugin_callbacks containing pointers to
- *     several funtions, including host_attach.
- *  3. For each instantiated plugin supporting this extension, host
- *     calls host_attach function with parameters:
- *     - a LV2_Handle, plugin instance handle
- *     - pointer to struct lv2dynparam_host_callbacks, containing
- *       pointers to several functions, to be called by plugin.
- *     - instance host context, opaque pointer
- *  4. During initialization (host_attach), initial groups and
- *     parameters appear and host callbacks are called by plugin.
+ * @par Intialization sequence
  *
- *  = Parameter types =
- *   - float, with range
- *   - 32-bit 2's complement signed int, with range
- *   - midi note, value stored as byte, with range
- *   - string
- *   - filename
- *   - boolean, value stored as byte, non-zero means TRUE, zero means FALSE 
- */
-
-/* Notes:
+ * -# Host discovers whether plugin supports the extension by
+ *    inspecting the RDF Turtle file.
+ * -# Host calls lv2 extension_data callback, plugin returns pointer
+ *    to struct lv2dynparam_plugin_callbacks containing pointers to
+ *    several funtions, including host_attach.
+ * -# For each instantiated plugin supporting this extension, host
+ *    calls host_attach function with parameters:
+ *    - a LV2_Handle, plugin instance handle
+ *    - pointer to struct lv2dynparam_host_callbacks, containing
+ *      pointers to several functions, to be called by plugin.
+ *    - instance host context, opaque pointer
+ * -# During initialization (host_attach), initial groups and
+ *    parameters appear and host callbacks are called by plugin.
+ *
+ * @par Parameter types
+ * - float, with range
+ * - 32-bit 2's complement signed int, with range
+ * - midi note, value stored as byte, with range
+ * - string
+ * - filename
+ * - boolean, value stored as byte, non-zero means TRUE, zero means FALSE 
+ *
+ * @par Notes:
  * - if function fails, variables where output parameters are normally
  *   stored remain unmodified.
  * - If host callback, called by plugin, fails - plugin should try the
@@ -126,16 +126,22 @@ extern "C" {
 } /* Adjust editor indent */
 #endif
 
+/** base URI to be used for composing real URIs (internal use only) */
 #define LV2DYNPARAM_BASE_URI "http://home.gna.org/lv2dynparam/v1"
 
-/* URI of the LV2 extension defined in this file */
+/** URI of the LV2 extension defined in this file */
 #define LV2DYNPARAM_URI LV2DYNPARAM_BASE_URI
 
-/* max size of name and type_uri buffers, including terminating zero char */
+/** max size of name and type_uri buffers, including terminating zero char */
 #define LV2DYNPARAM_MAX_STRING_SIZE 1024
 
+/** handle identifying parameter, supplied by plugin */
 typedef void * lv2dynparam_parameter_handle;
+
+/** handle identifying group, supplied by plugin */
 typedef void * lv2dynparam_group_handle;
+
+/** handle identifying command, supplied by plugin */
 typedef void * lv2dynparam_command_handle;
 
 struct lv2dynparam_host_callbacks
@@ -418,15 +424,34 @@ struct lv2dynparam_plugin_callbacks
     lv2dynparam_command_handle command);
 };
 
+/** URI for generic groups */
 #define LV2DYNPARAM_GROUP_TYPE_GENERIC_URI           LV2DYNPARAM_BASE_URI "#group_generic"
+
+/** URI for toggle-float groups */
 #define LV2DYNPARAM_GROUP_TYPE_TOGGLE_FLOAT_URI      LV2DYNPARAM_BASE_URI "#group_togglefloat"
+
+/** URI for ADSR groups */
 #define LV2DYNPARAM_GROUP_TYPE_ADSR_URI              LV2DYNPARAM_BASE_URI "#group_adsr"
+
+/** URI for float parameter */
 #define LV2DYNPARAM_PARAMETER_TYPE_FLOAT_URI         LV2DYNPARAM_BASE_URI "#parameter_float"
+
+/** URI for integer parameter */
 #define LV2DYNPARAM_PARAMETER_TYPE_INT_URI           LV2DYNPARAM_BASE_URI "#parameter_int"
+
+/** URI for note parameter */
 #define LV2DYNPARAM_PARAMETER_TYPE_NOTE_URI          LV2DYNPARAM_BASE_URI "#parameter_note"
+
+/** URI for string parameter */
 #define LV2DYNPARAM_PARAMETER_TYPE_STRING_URI        LV2DYNPARAM_BASE_URI "#parameter_string"
+
+/** URI for filename parameter */
 #define LV2DYNPARAM_PARAMETER_TYPE_FILENAME_URI      LV2DYNPARAM_BASE_URI "#parameter_filename"
+
+/** URI for boolean parameter */
 #define LV2DYNPARAM_PARAMETER_TYPE_BOOLEAN_URI       LV2DYNPARAM_BASE_URI "#parameter_boolean"
+
+/** URI for enumeration parameter */
 #define LV2DYNPARAM_PARAMETER_TYPE_ENUM_URI          LV2DYNPARAM_BASE_URI "#parameter_enum"
 
 #if 0

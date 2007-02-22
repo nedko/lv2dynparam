@@ -20,44 +20,126 @@
  *
  *****************************************************************************/
 
+/**
+ * @file plugin.h
+ * @brief Interface to LV2 dynparam extension plugin helper library
+ */
+
 #ifndef DYNPARAM_H__84DA2DA3_61BD_45AC_B202_6A08F27D56F5__INCLUDED
 #define DYNPARAM_H__84DA2DA3_61BD_45AC_B202_6A08F27D56F5__INCLUDED
 
 #include "types.h"
 
+/**
+ * Call this function to obtain pointer to data for LV2 dynparam extension.
+ * This pointer must be returned by LV2 extension_data() called for LV2DYNPARAM_URI
+ *
+ * @return The extension data for LV2 dynparam extension.
+ */
 void *
 get_lv2dynparam_plugin_extension_data(void);
 
+/** handle to plugin helper library instance */
 typedef void * lv2dynparam_plugin_instance;
+
+/** handle to plugin helper library representation of parameter */
 typedef void * lv2dynparam_plugin_parameter;
+
+/** handle to plugin helper library representation of group */
 typedef void * lv2dynparam_plugin_group;
 
+/**
+ * Call this function to instantiate LV2 dynparams extension for particular plugin.
+ * This function should be called from LV2 instatiate() function.
+ *
+ * @param instance Handle of LV2 plugin instance for which extension is being initialized.
+ * @param root_group_name Name of the root group
+ * @param instance_ptr Pointer to variable receiving handle to plugin helper library instance.
+ *
+ * @return Success status
+ * @retval TRUE - success
+ * @retval FALSE - error
+ */
 BOOL
 lv2dynparam_plugin_instantiate(
   LV2_Handle instance,
   const char * root_group_name,
   lv2dynparam_plugin_instance * instance_ptr);
 
+/**
+ * Call this function to cleanup previously instatiated extension for particular plugin.
+ * This function should be called from LV2 cleanup() function.
+ *
+ * @param instance Handle to instance received from lv2dynparam_plugin_instantiate()
+ */
 void
 lv2dynparam_plugin_cleanup(
-  lv2dynparam_plugin_instance instance_ptr);
+  lv2dynparam_plugin_instance instance);
 
+/**
+ * Type for callback function to be called by helper library when boolean parameter value is changed by host.
+ * Callee is not allowed to sleep/lock in this callback.
+ *
+ * @param context context supplied by plugin when parameter was added to helper library
+ * @param value new value of changed parameter
+ *
+ * @return Success status
+ * @retval TRUE - success
+ * @retval FALSE - error, try later
+ */
 typedef BOOL
 (*lv2dynparam_plugin_param_boolean_changed)(
   void * context,
   BOOL value);
 
+/**
+ * Type for callback function to be called by helper library when float parameter value is changed by host.
+ * Callee is not allowed to sleep/lock in this callback.
+ *
+ * @param context context supplied by plugin when parameter was added to helper library
+ * @param value new value of changed parameter
+ *
+ * @return Success status
+ * @retval TRUE - success
+ * @retval FALSE - error, try later
+ */
 typedef BOOL
 (*lv2dynparam_plugin_param_float_changed)(
   void * context,
   float value);
 
+/**
+ * Type for callback function to be called by helper library when enumeration parameter value is changed by host.
+ * Callee is not allowed to sleep/lock in this callback.
+ *
+ * @param context context supplied by plugin when parameter was added to helper library
+ * @param value new value of changed parameter
+ *
+ * @return Success status
+ * @retval TRUE - success
+ * @retval FALSE - error, try later
+ */
 typedef BOOL
 (*lv2dynparam_plugin_param_enum_changed)(
   void * context,
   const char * value,
   unsigned int value_index);
 
+/**
+ * Call this function to add new group.
+ * This function will not sleep/lock. It is safe to call it from callbacks
+ * for parameter changes and command executions.
+ *
+ * @param instance Handle to instance received from lv2dynparam_plugin_instantiate()
+ * @param parent_group Parent group, NULL for root group
+ * @param name Human readble name of group to add
+ * @param type_uri type of group to be added
+ * @param group_ptr Pointer to variable receiving handle to plugin helper library representation of group
+ *
+ * @return Success status
+ * @retval TRUE - success
+ * @retval FALSE - error, try later
+ */
 BOOL
 lv2dynparam_plugin_group_add(
   lv2dynparam_plugin_instance instance,
@@ -66,6 +148,23 @@ lv2dynparam_plugin_group_add(
   const char * type_uri,
   lv2dynparam_plugin_group * group_ptr);
 
+/**
+ * Call this function to add new boolean parameter.
+ * This function will not sleep/lock. It is safe to call it from callbacks
+ * for parameter changes and command executions.
+ *
+ * @param instance Handle to instance received from lv2dynparam_plugin_instantiate()
+ * @param group Parent group, NULL for root group
+ * @param name Human readble name of group to add
+ * @param value initial value of the parameter
+ * @param callback callback to be called when host requests value change
+ * @param callback_context context to be supplied as parameter to function supplied by @c callback parameter
+ * @param param_ptr Pointer to variable receiving handle to plugin helper library representation of parameter
+ *
+ * @return Success status
+ * @retval TRUE - success
+ * @retval FALSE - error, try later
+ */
 BOOL
 lv2dynparam_plugin_param_boolean_add(
   lv2dynparam_plugin_instance instance,
@@ -76,6 +175,25 @@ lv2dynparam_plugin_param_boolean_add(
   void * callback_context,
   lv2dynparam_plugin_parameter * param_ptr);
 
+/**
+ * Call this function to add new float parameter.
+ * This function will not sleep/lock. It is safe to call it from callbacks
+ * for parameter changes and command executions.
+ *
+ * @param instance Handle to instance received from lv2dynparam_plugin_instantiate()
+ * @param group Parent group, NULL for root group
+ * @param name Human readble name of group to add
+ * @param value initial value of the parameter
+ * @param min minimum allowed value of the parameter
+ * @param max maximum allowed value of the parameter
+ * @param callback callback to be called when host requests value change
+ * @param callback_context context to be supplied as parameter to function supplied by @c callback parameter
+ * @param param_ptr Pointer to variable receiving handle to plugin helper library representation of parameter
+ *
+ * @return Success status
+ * @retval TRUE - success
+ * @retval FALSE - error, try later
+ */
 BOOL
 lv2dynparam_plugin_param_float_add(
   lv2dynparam_plugin_instance instance,
@@ -88,6 +206,25 @@ lv2dynparam_plugin_param_float_add(
   void * callback_context,
   lv2dynparam_plugin_parameter * param_ptr);
 
+/**
+ * Call this function to add new enumeration parameter.
+ * This function will not sleep/lock. It is safe to call it from callbacks
+ * for parameter changes and command executions.
+ *
+ * @param instance Handle to instance received from lv2dynparam_plugin_instantiate()
+ * @param group Parent group, NULL for root group
+ * @param name Human readble name of group to add
+ * @param values_ptr_ptr Pointer to array of strings containing enumeration valid values.
+ * @param values_count Number of strings in the array pointed by the @c values_ptr_ptr parameter
+ * @param initial_value_index Index in array pointed by the @c values_ptr_ptr parameter, specifying initial value
+ * @param callback callback to be called when host requests value change
+ * @param callback_context context to be supplied as parameter to function supplied by @c callback parameter
+ * @param param_ptr Pointer to variable receiving handle to plugin helper library representation of parameter
+ *
+ * @return Success status
+ * @retval TRUE - success
+ * @retval FALSE - error, try later
+ */
 BOOL
 lv2dynparam_plugin_param_enum_add(
   lv2dynparam_plugin_instance instance,
@@ -100,13 +237,32 @@ lv2dynparam_plugin_param_enum_add(
   void * callback_context,
   lv2dynparam_plugin_parameter * param_ptr);
 
-/* called by plugin when it decides to remove parameter */
+/**
+ * Call this function to remove parameter
+ *
+ * @param instance Handle to instance received from lv2dynparam_plugin_instantiate()
+ * @param param handle to plugin helper library representation of parameter to remove
+ *
+ * @return Success status
+ * @retval TRUE - success
+ * @retval FALSE - error, try later
+ */
 BOOL
 lv2dynparam_plugin_param_remove(
   lv2dynparam_plugin_instance instance,
   lv2dynparam_plugin_parameter param);
 
-/* called by plugin when it decides to change bool parameter value */
+/**
+ * Call this function to change boolean parameter value
+ *
+ * @param instance Handle to instance received from lv2dynparam_plugin_instantiate()
+ * @param param handle to plugin helper library representation of parameter to change
+ * @param value new value
+ *
+ * @return Success status
+ * @retval TRUE - success
+ * @retval FALSE - error, try later
+ */
 BOOL
 lv2dynparam_plugin_param_boolean_change(
   lv2dynparam_plugin_instance instance,

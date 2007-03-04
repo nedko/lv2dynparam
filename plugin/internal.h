@@ -46,6 +46,7 @@ struct lv2dynparam_plugin_group
 
   struct lv2dynparam_plugin_group * group_ptr; /* parent group */
 
+  struct lv2dynparam_hints hints;
   char name[LV2DYNPARAM_MAX_STRING_SIZE];
   char type_uri[LV2DYNPARAM_MAX_STRING_SIZE];
   struct list_head child_groups;
@@ -62,6 +63,7 @@ struct lv2dynparam_plugin_parameter
 
   struct lv2dynparam_plugin_group * group_ptr; /* parent group */
 
+  struct lv2dynparam_hints hints;
   unsigned int type;
   char name[LV2DYNPARAM_MAX_STRING_SIZE];
   union

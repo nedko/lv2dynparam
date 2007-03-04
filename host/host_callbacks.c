@@ -46,6 +46,7 @@ lv2dynparam_host_group_appear(
   void * instance_host_context,
   void * parent_group_host_context,
   lv2dynparam_group_handle group,
+  const struct lv2dynparam_hints * hints_ptr,
   void ** group_host_context)
 {
   struct lv2dynparam_host_group * group_ptr;
@@ -95,6 +96,8 @@ lv2dynparam_host_group_appear(
     lv2dynparam_host_group_pending_children_count_increment(parent_group_ptr);
   }
 
+  LOG_DEBUG("%u hints", hints_ptr->count);
+
   *group_host_context = group_ptr;
 
   return TRUE;
@@ -116,6 +119,7 @@ lv2dynparam_host_parameter_appear(
   void * instance_host_context,
   void * group_host_context,
   lv2dynparam_parameter_handle parameter,
+  const struct lv2dynparam_hints * hints_ptr,
   void ** parameter_host_context)
 {
   struct lv2dynparam_host_parameter * param_ptr;
@@ -136,6 +140,7 @@ lv2dynparam_host_parameter_appear(
   instance_ptr->callbacks_ptr->parameter_get_type_uri(parameter, param_ptr->type_uri);
 
   LOG_DEBUG("Parameter \"%s\" of type \"%s\" with parent \"%s\" appeared.", param_ptr->name, param_ptr->type_uri, group_ptr->name);
+  LOG_DEBUG("%u hints", hints_ptr->count);
 
   if (!lv2dynparam_host_map_type_uri(param_ptr))
   {
@@ -273,6 +278,7 @@ lv2dynparam_host_command_appear(
   void * instance_host_context,
   void * group_host_context,
   lv2dynparam_command_handle command,
+  const struct lv2dynparam_hints * hints_ptr,
   void ** command_context)
 {
   LOG_DEBUG("Command apperead.");

@@ -29,6 +29,7 @@
 #include "../list.h"
 #include "plugin.h"
 #include "../memory_atomic.h"
+#include "../hint_set.h"
 #include "internal.h"
 #define LOG_LEVEL LOG_LEVEL_ERROR
 #include "../log.h"
@@ -60,6 +61,7 @@ lv2dynparam_plugin_group_init(
     return FALSE;
   }
 
+  lv2dynparam_hints_init_empty(&group_ptr->hints);
   memcpy(group_ptr->name, name, name_size);
   memcpy(group_ptr->type_uri, type_uri, type_uri_size);
   group_ptr->group_ptr = parent_group_ptr;
@@ -137,6 +139,8 @@ lv2dynparam_plugin_group_clean(
     list_del(node_ptr);
     lv2dynparam_plugin_parameter_free(instance_ptr, child_param_ptr);
   }
+
+  lv2dynparam_hints_clear(&group_ptr->hints);
 }
 
 void
@@ -174,6 +178,7 @@ lv2dynparam_plugin_group_notify(
           instance_ptr->host_context,
           group_ptr->group_ptr == NULL ? NULL : group_ptr->group_ptr->host_context, /* host context of parent group */
           (lv2dynparam_group_handle)group_ptr,
+          &group_ptr->hints,
           &group_ptr->host_context))
     {
       group_ptr->pending = LV2DYNPARAM_PENDING_NOTHING;

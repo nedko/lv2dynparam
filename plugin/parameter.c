@@ -30,6 +30,7 @@
 #include "../memory_atomic.h"
 #include "internal.h"
 #include "../helpers.h"
+#include "../hint_set.h"
 
 //#define LOG_LEVEL LOG_LEVEL_DEBUG
 #include "../log.h"
@@ -51,7 +52,8 @@ lv2dynparam_plugin_parameter_free(
     return;
   }
 
-  lv2dynparam_plugin_group_free(instance_ptr, instance_ptr->parameters_pool);
+  lv2dynparam_hints_clear(&param_ptr->hints);
+  lv2dynparam_memory_pool_deallocate(instance_ptr->parameters_pool, param_ptr);
 }
 
 #define parameter_ptr ((struct lv2dynparam_plugin_parameter *)parameter)
@@ -249,6 +251,7 @@ lv2dynparam_plugin_param_notify(
           instance_ptr->host_context,
           param_ptr->group_ptr->host_context,
           param_ptr,
+          &param_ptr->hints,
           &param_ptr->host_context))
     {
       param_ptr->pending = LV2DYNPARAM_PENDING_NOTHING;
@@ -343,6 +346,8 @@ lv2dynparam_plugin_param_boolean_add(
   {
     return FALSE;
   }
+
+  lv2dynparam_hints_init_empty(&param_ptr->hints);
 
   param_ptr->type = LV2DYNPARAM_PARAMETER_TYPE_BOOLEAN;
 
@@ -439,6 +444,8 @@ lv2dynparam_plugin_param_float_add(
   {
     return FALSE;
   }
+
+  lv2dynparam_hints_init_empty(&param_ptr->hints);
 
   param_ptr->type = LV2DYNPARAM_PARAMETER_TYPE_FLOAT;
 
@@ -562,6 +569,8 @@ lv2dynparam_plugin_param_enum_add(
   {
     goto fail_free_values;
   }
+
+  lv2dynparam_hints_init_empty(&param_ptr->hints);
 
   param_ptr->type = LV2DYNPARAM_PARAMETER_TYPE_ENUM;
 

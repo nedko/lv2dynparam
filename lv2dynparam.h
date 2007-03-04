@@ -144,6 +144,20 @@ typedef void * lv2dynparam_group_handle;
 /** handle identifying command, supplied by plugin */
 typedef void * lv2dynparam_command_handle;
 
+/**
+ * Structure containing set of hints.
+ */
+struct lv2dynparam_hints
+{
+  unsigned char count;          /**< Number of hints in the set. Size of @c names and @c values arrays. */
+  char ** names;                /**< Hint names. Array of hint names with size @c count. */
+  char ** values;               /**< Hint values. Array of hint values with size @c count. Element can be NULL if hint has no value. */
+};
+
+/**
+ * Structure containing poitners to functions called by
+ * plugin and implemented by host.
+ */
 struct lv2dynparam_host_callbacks
 {
   /**
@@ -155,6 +169,8 @@ struct lv2dynparam_host_callbacks
    * @param parent_group_host_context Host context of parent
    * group. For the root group, parent context is NULL.
    * @param group Plugin context for the group
+   * @param hints_ptr Pointer to structure representing hints set
+   * associated with appearing group.
    * @param group_host_context Pointer to variable where host context
    * for the new group will be stored.
    *
@@ -166,6 +182,7 @@ struct lv2dynparam_host_callbacks
     void * instance_host_context,
     void * parent_group_host_context,
     lv2dynparam_group_handle group,
+    const struct lv2dynparam_hints * hints_ptr,
     void ** group_host_context);
 
   /**
@@ -192,6 +209,8 @@ struct lv2dynparam_host_callbacks
    * during initialization (host_attach).
    * @param group_host_context Host context of parent group.
    * @param parameter Plugin context for the parameter
+   * @param hints_ptr Pointer to structure representing hints set
+   * associated with appearing parameter.
    * @param parameter_host_context Pointer to variable where host
    * context for the new parameter will be stored.
    *
@@ -203,6 +222,7 @@ struct lv2dynparam_host_callbacks
     void * instance_host_context,
     void * group_host_context,
     lv2dynparam_parameter_handle parameter,
+    const struct lv2dynparam_hints * hints_ptr,
     void ** parameter_host_context);
 
   /**
@@ -244,6 +264,8 @@ struct lv2dynparam_host_callbacks
    * during initialization (host_attach).
    * @param group_host_context Host context of parent group.
    * @param command Plugin context for the command
+   * @param hints_ptr Pointer to structure representing hints set
+   * associated with appearing command.
    * @param command_host_context Pointer to variable where host
    * context for the new command will be stored.
    *
@@ -255,6 +277,7 @@ struct lv2dynparam_host_callbacks
     void * instance_host_context,
     void * group_host_context,
     lv2dynparam_command_handle command,
+    const struct lv2dynparam_hints * hints_ptr,
     void ** command_host_context);
 
   /**
@@ -274,7 +297,11 @@ struct lv2dynparam_host_callbacks
     void * command_host_context);
 };
 
-/* Pointer to this struct is returned by extension_data plugin callback */
+/**
+ * Structure containing poitners to functions called by
+ * host and implemented by plugin.
+ * Pointer to this struct is returned by LV2 extension_data plugin callback
+ */
 struct lv2dynparam_plugin_callbacks
 {
   /**

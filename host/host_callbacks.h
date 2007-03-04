@@ -30,6 +30,7 @@ lv2dynparam_host_group_appear(
   void * instance_host_context,
   void * parent_group_host_context,
   lv2dynparam_group_handle group,
+  const struct lv2dynparam_hints * hints_ptr,
   void ** host_context);
 
 unsigned char
@@ -42,6 +43,7 @@ lv2dynparam_host_parameter_appear(
   void * instance_host_context,
   void * group_host_context,
   lv2dynparam_parameter_handle parameter,
+  const struct lv2dynparam_hints * hints_ptr,
   void ** parameter_host_context);
 
 unsigned char
@@ -59,6 +61,7 @@ lv2dynparam_host_command_appear(
   void * instance_host_context,
   void * group_host_context,
   lv2dynparam_command_handle command,
+  const struct lv2dynparam_hints * hints_ptr,
   void ** command_context);
 
 unsigned char

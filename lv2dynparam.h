@@ -438,15 +438,6 @@ struct lv2dynparam_plugin_callbacks
     lv2dynparam_command_handle command);
 };
 
-/** URI for generic groups */
-#define LV2DYNPARAM_GROUP_TYPE_GENERIC_URI           LV2DYNPARAM_BASE_URI "#group_generic"
-
-/** URI for toggle-float groups */
-#define LV2DYNPARAM_GROUP_TYPE_TOGGLE_FLOAT_URI      LV2DYNPARAM_BASE_URI "#group_togglefloat"
-
-/** URI for ADSR groups */
-#define LV2DYNPARAM_GROUP_TYPE_ADSR_URI              LV2DYNPARAM_BASE_URI "#group_adsr"
-
 /** URI for float parameter */
 #define LV2DYNPARAM_PARAMETER_TYPE_FLOAT_URI         LV2DYNPARAM_BASE_URI "#parameter_float"
 

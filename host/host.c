@@ -33,6 +33,7 @@
 #include "internal.h"
 #include "host_callbacks.h"
 #include "../helpers.h"
+#include "../hint_set.h"
 
 #define LOG_LEVEL LOG_LEVEL_ERROR
 #include "../log.h"
@@ -52,7 +53,17 @@ lv2dynparam_host_parameter_free(
     return;
   }
 
+  lv2dynparam_hints_clear(&parameter_ptr->hints);
   lv2dynparam_memory_pool_deallocate(instance_ptr->parameters_pool, parameter_ptr);
+}
+
+void
+lv2dynparam_host_group_free(
+  struct lv2dynparam_host_instance * instance_ptr,
+  struct lv2dynparam_host_group * group_ptr)
+{
+  lv2dynparam_hints_clear(&group_ptr->hints);
+  lv2dynparam_memory_pool_deallocate(instance_ptr->groups_pool, group_ptr);
 }
 
 BOOL
@@ -251,7 +262,7 @@ lv2dynparam_host_notify_group_appeared(
     instance_ptr->instance_ui_context,
     parent_group_ui_context,
     group_ptr->name,
-    group_ptr->type_uri,
+    &group_ptr->hints,
     &group_ptr->ui_context);
 }
 
@@ -295,6 +306,7 @@ lv2dynparam_host_notify_parameter_appeared(
       instance_ptr->instance_ui_context,
       parameter_ptr->group_ptr->ui_context,
       parameter_ptr->name,
+      &parameter_ptr->hints,
       parameter_ptr->data.boolean,
       &parameter_ptr->ui_context);
     break;
@@ -304,6 +316,7 @@ lv2dynparam_host_notify_parameter_appeared(
       instance_ptr->instance_ui_context,
       parameter_ptr->group_ptr->ui_context,
       parameter_ptr->name,
+      &parameter_ptr->hints,
       parameter_ptr->data.fpoint.value,
       parameter_ptr->data.fpoint.min,
       parameter_ptr->data.fpoint.max,
@@ -315,6 +328,7 @@ lv2dynparam_host_notify_parameter_appeared(
       instance_ptr->instance_ui_context,
       parameter_ptr->group_ptr->ui_context,
       parameter_ptr->name,
+      &parameter_ptr->hints,
       parameter_ptr->data.enumeration.selected_value,
       (const char * const *)parameter_ptr->data.enumeration.values,
       parameter_ptr->data.enumeration.values_count,
@@ -392,6 +406,14 @@ lv2dynparam_host_notify(
       lv2dynparam_host_group_pending_children_count_decrement(group_ptr);
       break;
     case LV2DYNPARAM_PENDING_NOTHING:
+      break;
+    case LV2DYNPARAM_PENDING_DISAPPEAR:
+      lv2dynparam_host_notify_group_disappeared(
+        instance_ptr,
+        child_group_ptr);
+      lv2dynparam_host_group_pending_children_count_decrement(group_ptr);
+      list_del(&child_group_ptr->siblings);
+      lv2dynparam_host_group_free(instance_ptr, child_group_ptr);
       break;
     default:
       LOG_ERROR("unknown pending_state %u of group \"%s\"", child_group_ptr->pending_state, child_group_ptr->name);
@@ -571,7 +593,7 @@ lv2dynparam_host_ui_run(
   if (instance_ptr->ui)         /* we have nothing to do if there is no ui shown */
   {
     /* At this point we should have the root group appeared and gui-referenced,
-       because it appears and host attach that is called before lv2dynparam_host_ui_on()
+       because it appears on host attach that is called before lv2dynparam_host_ui_on()
        and because lv2dynparam_host_ui_on() will gui-reference it. */
     assert(instance_ptr->root_group_ptr != NULL);
     assert(instance_ptr->root_group_ptr->pending_state == LV2DYNPARAM_PENDING_NOTHING);
@@ -644,6 +666,16 @@ lv2dynparam_host_ui_off(
   //LOG_DEBUG("pending_childern_count is %u", instance_ptr->root_group_ptr->pending_childern_count);
 
   audiolock_leave_ui(instance_ptr->lock);
+}
+
+void
+lv2dynparam_host_detach(
+  lv2dynparam_host_instance instance)
+{
+  /* TODO:
+   * - deallocate resources in host tree
+   * - free per instance resources allocated in lv2dynparam_host_attach()
+   */
 }
 
 #define parameter_ptr ((struct lv2dynparam_host_parameter *)parameter_handle)

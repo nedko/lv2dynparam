@@ -50,7 +50,8 @@ struct lv2dynparam_host_group
   struct list_head child_commands;
 
   char name[LV2DYNPARAM_MAX_STRING_SIZE];
-  char type_uri[LV2DYNPARAM_MAX_STRING_SIZE];
+
+  struct lv2dynparam_hints hints;
 
   unsigned int pending_state;
   unsigned int pending_childern_count;
@@ -64,6 +65,7 @@ struct lv2dynparam_host_parameter
   struct lv2dynparam_host_group * group_ptr;
   lv2dynparam_parameter_handle param_handle;
   char name[LV2DYNPARAM_MAX_STRING_SIZE];
+  struct lv2dynparam_hints hints;
   char type_uri[LV2DYNPARAM_MAX_STRING_SIZE];
   unsigned int type;
 

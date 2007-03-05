@@ -325,19 +325,6 @@ struct lv2dynparam_plugin_callbacks
     void * instance_host_context);
 
   /**
-   * This function is called by host to retrieve type URI of group
-   * Plugin implementation must not suspend execution (sleep/lock).
-   *
-   * @param group Group handle, as supplied by plugin
-   * @param buffer Pointer to buffer with size of
-   * LV2DYNPARAM_MAX_STRING_SIZE bytes, where ASCIIZ string containing
-   * type URI of the group will be stored.
-   */
-  void (*group_get_type_uri)(
-    lv2dynparam_group_handle group,
-    char * buffer);
-
-  /**
    * This function is called by host to retrieve name of group
    * Plugin implementation must not suspend execution (sleep/lock).
    *

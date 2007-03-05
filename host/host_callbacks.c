@@ -35,6 +35,7 @@
 #include "internal.h"
 #include "host_callbacks.h"
 #include "../helpers.h"
+#include "../hint_set.h"
 
 //#define LOG_LEVEL LOG_LEVEL_DEBUG
 #include "../log.h"
@@ -65,8 +66,15 @@ lv2dynparam_host_group_appear(
   group_ptr = lv2dynparam_memory_pool_allocate(instance_ptr->groups_pool);
   if (group_ptr == NULL)
   {
-    /* we are not lucky enough, plugin will retry later */
     goto fail;
+  }
+
+  if (!lv2dynparam_hints_init_copy(
+        instance_ptr->memory,
+        hints_ptr,
+        &group_ptr->hints))
+  {
+    goto fail_deallocate;
   }
 
   group_ptr->parent_group_ptr = parent_group_ptr;
@@ -78,19 +86,18 @@ lv2dynparam_host_group_appear(
   INIT_LIST_HEAD(&group_ptr->child_commands);
 
   instance_ptr->callbacks_ptr->group_get_name(group, group_ptr->name);
-  instance_ptr->callbacks_ptr->group_get_type_uri(group, group_ptr->type_uri);
 
   group_ptr->pending_state = LV2DYNPARAM_PENDING_APPEAR;
   group_ptr->pending_childern_count = 0;
 
   if (parent_group_ptr == NULL)
   {
-    LOG_DEBUG("The top level group \"%s\" of type \"%s\" appeared", group_ptr->name, group_ptr->type_uri);
+    LOG_DEBUG("The top level group \"%s\" appeared", group_ptr->name);
     instance_ptr->root_group_ptr = group_ptr;
   }
   else
   {
-    LOG_DEBUG("Group \"%s\" of type \"%s\" with parent \"%s\" appeared.", group_ptr->name, group_ptr->type_uri, parent_group_ptr->name);
+    LOG_DEBUG("Group \"%s\" with parent \"%s\" appeared.", group_ptr->name, parent_group_ptr->name);
     list_add_tail(&group_ptr->siblings, &parent_group_ptr->child_groups);
 
     lv2dynparam_host_group_pending_children_count_increment(parent_group_ptr);
@@ -102,7 +109,11 @@ lv2dynparam_host_group_appear(
 
   return TRUE;
 
+fail_deallocate:
+  lv2dynparam_memory_pool_deallocate(instance_ptr->groups_pool, group_ptr);
+
 fail:
+  /* we are not lucky enough, plugin will retry later */
   return FALSE;
 }
 
@@ -111,6 +122,15 @@ lv2dynparam_host_group_disappear(
   void * instance_host_context,
   void * group_host_context)
 {
+  struct lv2dynparam_host_group * group_ptr;
+
+  group_ptr = (struct lv2dynparam_host_group *)group_host_context;
+
+  LOG_DEBUG("Group %s disappeared.", group_ptr->name);
+
+  group_ptr->pending_state = LV2DYNPARAM_PENDING_DISAPPEAR;
+  lv2dynparam_host_group_pending_children_count_increment(group_ptr->parent_group_ptr);
+
   return TRUE;
 }
 
@@ -131,7 +151,7 @@ lv2dynparam_host_parameter_appear(
   param_ptr = lv2dynparam_memory_pool_allocate(instance_ptr->parameters_pool);
   if (param_ptr == NULL)
   {
-    return FALSE;
+    goto fail;
   }
 
   param_ptr->param_handle = parameter;
@@ -151,6 +171,14 @@ lv2dynparam_host_parameter_appear(
     *parameter_host_context = NULL;
 
     return TRUE;
+  }
+
+  if (!lv2dynparam_hints_init_copy(
+        instance_ptr->memory,
+        hints_ptr,
+        &param_ptr->hints))
+  {
+    goto fail_deallocate;
   }
 
   instance_ptr->callbacks_ptr->parameter_get_value(
@@ -216,8 +244,7 @@ lv2dynparam_host_parameter_appear(
         param_ptr->data.enumeration.values_count);
     if (param_ptr->data.enumeration.values == NULL)
     {
-      lv2dynparam_memory_pool_deallocate(instance_ptr->parameters_pool, param_ptr);
-      return FALSE;
+      goto fail_clear_hints;
     }
 
     LOG_DEBUG("Enum parameter with %u possible values", param_ptr->data.enumeration.values_count);
@@ -243,6 +270,15 @@ lv2dynparam_host_parameter_appear(
   *parameter_host_context = param_ptr;
 
   return TRUE;
+
+fail_clear_hints:
+  lv2dynparam_hints_clear(&param_ptr->hints);
+
+fail_deallocate:
+  lv2dynparam_memory_pool_deallocate(instance_ptr->parameters_pool, param_ptr);
+
+fail:
+  return FALSE;
 }
 
 #define param_ptr ((struct lv2dynparam_host_parameter *)parameter_host_context)

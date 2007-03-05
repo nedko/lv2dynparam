@@ -133,7 +133,7 @@ typedef BOOL
  * @param instance Handle to instance received from lv2dynparam_plugin_instantiate()
  * @param parent_group Parent group, NULL for root group
  * @param name Human readble name of group to add
- * @param type_uri type of group to be added
+ * @param hints_ptr Pointer to group hints. Can be NULL (no hints).
  * @param group_ptr Pointer to variable receiving handle to plugin helper library representation of group
  *
  * @return Success status
@@ -145,7 +145,7 @@ lv2dynparam_plugin_group_add(
   lv2dynparam_plugin_instance instance,
   lv2dynparam_plugin_group parent_group,
   const char * name,
-  const char * type_uri,
+  const struct lv2dynparam_hints * hints_ptr,
   lv2dynparam_plugin_group * group_ptr);
 
 /**
@@ -156,6 +156,7 @@ lv2dynparam_plugin_group_add(
  * @param instance Handle to instance received from lv2dynparam_plugin_instantiate()
  * @param group Parent group, NULL for root group
  * @param name Human readble name of group to add
+ * @param hints_ptr Pointer to group hints. Can be NULL (no hints).
  * @param value initial value of the parameter
  * @param callback callback to be called when host requests value change
  * @param callback_context context to be supplied as parameter to function supplied by @c callback parameter
@@ -170,6 +171,7 @@ lv2dynparam_plugin_param_boolean_add(
   lv2dynparam_plugin_instance instance,
   lv2dynparam_plugin_group group,
   const char * name,
+  const struct lv2dynparam_hints * hints_ptr,
   int value,
   lv2dynparam_plugin_param_boolean_changed callback,
   void * callback_context,
@@ -183,6 +185,7 @@ lv2dynparam_plugin_param_boolean_add(
  * @param instance Handle to instance received from lv2dynparam_plugin_instantiate()
  * @param group Parent group, NULL for root group
  * @param name Human readble name of group to add
+ * @param hints_ptr Pointer to group hints. Can be NULL (no hints).
  * @param value initial value of the parameter
  * @param min minimum allowed value of the parameter
  * @param max maximum allowed value of the parameter
@@ -199,6 +202,7 @@ lv2dynparam_plugin_param_float_add(
   lv2dynparam_plugin_instance instance,
   lv2dynparam_plugin_group group,
   const char * name,
+  const struct lv2dynparam_hints * hints_ptr,
   float value,
   float min,
   float max,
@@ -214,6 +218,7 @@ lv2dynparam_plugin_param_float_add(
  * @param instance Handle to instance received from lv2dynparam_plugin_instantiate()
  * @param group Parent group, NULL for root group
  * @param name Human readble name of group to add
+ * @param hints_ptr Pointer to group hints. Can be NULL (no hints).
  * @param values_ptr_ptr Pointer to array of strings containing enumeration valid values.
  * @param values_count Number of strings in the array pointed by the @c values_ptr_ptr parameter
  * @param initial_value_index Index in array pointed by the @c values_ptr_ptr parameter, specifying initial value
@@ -230,6 +235,7 @@ lv2dynparam_plugin_param_enum_add(
   lv2dynparam_plugin_instance instance,
   lv2dynparam_plugin_group group,
   const char * name,
+  const struct lv2dynparam_hints * hints_ptr,
   const char ** values_ptr_ptr,
   unsigned int values_count,
   unsigned int initial_value_index,

@@ -48,7 +48,6 @@ struct lv2dynparam_plugin_group
 
   struct lv2dynparam_hints hints;
   char name[LV2DYNPARAM_MAX_STRING_SIZE];
-  char type_uri[LV2DYNPARAM_MAX_STRING_SIZE];
   struct list_head child_groups;
   struct list_head child_parameters;
 
@@ -135,13 +134,17 @@ lv2dynparam_plugin_host_attach(
   struct lv2dynparam_host_callbacks * host_callbacks,
   void * instance_host_context);
 
+void
+lv2dynparam_plugin_host_detach(
+  LV2_Handle instance);
+
 BOOL
 lv2dynparam_plugin_group_init(
   struct lv2dynparam_plugin_instance * instance_ptr,
   struct lv2dynparam_plugin_group * group_ptr,
   struct lv2dynparam_plugin_group * parent_group_ptr,
-  const char * name,
-  const char * type_uri);
+  const struct lv2dynparam_hints * hints_ptr,
+  const char * name);
 
 void
 lv2dynparam_plugin_group_clean(

@@ -72,7 +72,7 @@ lv2dynparam_host_attach(
  * @param instance Handle to instance received from lv2dynparam_host_attach()
  */
 void
-lv2dynparam_host_deattach(
+lv2dynparam_host_detach(
   lv2dynparam_host_instance instance);
 
 /**
@@ -170,7 +170,7 @@ lv2dynparam_host_ui_off(
  * as supplied previously to lv2dynparam_host_attach()
  * @param parent_group_ui_context user context of parent group, NULL for root group.
  * @param group_name name of group that is appearing
- * @param group_type_uri type of group that is appearing
+ * @param hints_ptr Pointer to group hints.
  * @param group_ui_context Pointer to variable receiving UI context of appeared group.
  */
 void
@@ -179,7 +179,7 @@ dynparam_group_appeared(
   void * instance_ui_context,
   void * parent_group_ui_context,
   const char * group_name,
-  const char * group_type_uri,
+  const struct lv2dynparam_hints * hints_ptr,
   void ** group_ui_context);
 
 /**
@@ -238,6 +238,7 @@ dynparam_command_disappeared(
  * as supplied previously to lv2dynparam_host_attach()
  * @param group_ui_context User context of parent group, NULL for root group.
  * @param parameter_name Name of parameter that is appearing
+ * @param hints_ptr Pointer to parameter hints.
  * @param value Initial value of the appearing parameter
  * @param parameter_ui_context Pointer to variable receiving UI context of appeared parameter.
  */
@@ -247,6 +248,7 @@ dynparam_parameter_boolean_appeared(
   void * instance_ui_context,
   void * group_ui_context,
   const char * parameter_name,
+  const struct lv2dynparam_hints * hints_ptr,
   BOOL value,
   void ** parameter_ui_context);
 
@@ -273,6 +275,7 @@ dynparam_parameter_boolean_disappeared(
  * as supplied previously to lv2dynparam_host_attach()
  * @param group_ui_context User context of parent group, NULL for root group.
  * @param parameter_name Name of parameter that is appearing
+ * @param hints_ptr Pointer to parameter hints.
  * @param value Initial value of the appearing parameter
  * @param min Minimum allowed value of the appearing parameter
  * @param max Maximum allowed value of the appearing parameter
@@ -284,6 +287,7 @@ dynparam_parameter_float_appeared(
   void * instance_ui_context,
   void * group_ui_context,
   const char * parameter_name,
+  const struct lv2dynparam_hints * hints_ptr,
   float value,
   float min,
   float max,
@@ -312,6 +316,7 @@ dynparam_parameter_float_disappeared(
  * as supplied previously to lv2dynparam_host_attach()
  * @param group_ui_context User context of parent group, NULL for root group.
  * @param parameter_name Name of parameter that is appearing
+ * @param hints_ptr Pointer to parameter hints.
  * @param selected_value Index in array pointed by the @c values_ptr_ptr parameter, specifying selected initial value
  * @param values Pointer to array of strings containing enumeration valid values.
  * @param values_count Number of strings in the array pointed by the @c values_ptr_ptr parameter
@@ -323,6 +328,7 @@ dynparam_parameter_enum_appeared(
   void * instance_ui_context,
   void * group_ui_context,
   const char * parameter_name,
+  const struct lv2dynparam_hints * hints_ptr,
   unsigned int selected_value,
   const char * const * values,
   unsigned int values_count,

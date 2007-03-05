@@ -22,6 +22,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #include "../lv2.h"
 #include "../lv2dynparam.h"
@@ -36,7 +37,6 @@ static struct lv2dynparam_plugin_callbacks g_lv2dynparam_plugin_callbacks =
 {
   .host_attach = lv2dynparam_plugin_host_attach,
 
-  .group_get_type_uri = lv2dynparam_plugin_group_get_type_uri,
   .group_get_name = lv2dynparam_plugin_group_get_name,
 
   .parameter_get_type_uri = lv2dynparam_plugin_parameter_get_type_uri,
@@ -113,8 +113,8 @@ lv2dynparam_plugin_instantiate(
         instance_ptr,
         &instance_ptr->root_group,
         NULL,
-        root_group_name,
-        LV2DYNPARAM_GROUP_TYPE_GENERIC_URI))
+        NULL,
+        root_group_name))
   {
     ret = FALSE;
     goto free_destroy_parameters_pool;

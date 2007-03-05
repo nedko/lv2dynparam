@@ -39,11 +39,11 @@ lv2dynparam_plugin_group_init(
   struct lv2dynparam_plugin_instance * instance_ptr,
   struct lv2dynparam_plugin_group * group_ptr,
   struct lv2dynparam_plugin_group * parent_group_ptr,
-  const char * name,
-  const char * type_uri)
+  const struct lv2dynparam_hints * hints_ptr,
+  const char * name)
 {
   size_t name_size;
-  size_t type_uri_size;
+  unsigned int index;
 
   LOG_DEBUG("lv2dynparam_plugin_group_init() called for \"%s\"", name);
 
@@ -54,16 +54,32 @@ lv2dynparam_plugin_group_init(
     return FALSE;
   }
 
-  type_uri_size = strlen(type_uri) + 1;
-  if (type_uri_size >= LV2DYNPARAM_MAX_STRING_SIZE)
+  if (hints_ptr != NULL)
   {
-    assert(0);
-    return FALSE;
+    LOG_DEBUG("%u hints", hints_ptr->count);
+    for (index = 0 ; index < hints_ptr->count ; index++)
+    {
+      if (hints_ptr->values[index] == NULL)
+      {
+        LOG_DEBUG("  \"%s\"", hints_ptr->names[index]);
+      }
+      else
+      {
+        LOG_DEBUG("  \"%s\":\"%s\"", hints_ptr->names[index], hints_ptr->values[index]);
+      }
+    }
+
+    if (!lv2dynparam_hints_init_copy(instance_ptr->memory, hints_ptr, &group_ptr->hints))
+    {
+      return FALSE;
+    }
+  }
+  else
+  {
+    lv2dynparam_hints_init_empty(&group_ptr->hints);
   }
 
-  lv2dynparam_hints_init_empty(&group_ptr->hints);
   memcpy(group_ptr->name, name, name_size);
-  memcpy(group_ptr->type_uri, type_uri, type_uri_size);
   group_ptr->group_ptr = parent_group_ptr;
   INIT_LIST_HEAD(&group_ptr->child_groups);
   INIT_LIST_HEAD(&group_ptr->child_parameters);
@@ -79,7 +95,7 @@ lv2dynparam_plugin_group_new(
   struct lv2dynparam_plugin_instance * instance_ptr,
   struct lv2dynparam_plugin_group * parent_group_ptr,
   const char * name,
-  const char * type_uri,
+  const struct lv2dynparam_hints * hints_ptr,
   struct lv2dynparam_plugin_group ** group_ptr_ptr)
 {
   BOOL ret;
@@ -92,7 +108,7 @@ lv2dynparam_plugin_group_new(
     goto exit;
   }
 
-  if (!lv2dynparam_plugin_group_init(instance_ptr, group_ptr, parent_group_ptr, name, type_uri))
+  if (!lv2dynparam_plugin_group_init(instance_ptr, group_ptr, parent_group_ptr, hints_ptr, name))
   {
     ret = FALSE;
     goto free;
@@ -223,20 +239,6 @@ lv2dynparam_plugin_group_notify(
 #define group_ptr ((struct lv2dynparam_plugin_group *)group)
 
 void
-lv2dynparam_plugin_group_get_type_uri(
-  lv2dynparam_group_handle group,
-  char * buffer)
-{
-  size_t s;
-
-  s = strlen(group_ptr->type_uri) + 1;
-
-  assert(s <= LV2DYNPARAM_MAX_STRING_SIZE);
-
-  memcpy(buffer, group_ptr->type_uri, s);
-}
-
-void
 lv2dynparam_plugin_group_get_name(
   lv2dynparam_group_handle group,
   char * buffer)
@@ -261,7 +263,7 @@ lv2dynparam_plugin_group_add(
   lv2dynparam_plugin_instance instance_handle,
   lv2dynparam_plugin_group parent_group,
   const char * name,
-  const char * type_uri,
+  const struct lv2dynparam_hints * hints_ptr,
   lv2dynparam_plugin_group * group_handle_ptr)
 {
   struct lv2dynparam_plugin_group * group_ptr;
@@ -272,7 +274,7 @@ lv2dynparam_plugin_group_add(
         instance_ptr,
         parent_group_ptr == NULL ? &instance_ptr->root_group: parent_group_ptr,
         name,
-        type_uri,
+        hints_ptr,
         &group_ptr))
   {
     return FALSE;

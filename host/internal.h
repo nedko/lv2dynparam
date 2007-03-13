@@ -81,6 +81,12 @@ struct lv2dynparam_host_parameter
     } fpoint;
     struct
     {
+      signed int value;
+      signed int min;
+      signed int max;
+    } integer;
+    struct
+    {
       char ** values;
       unsigned int values_count;
       unsigned int selected_value;

@@ -218,6 +218,10 @@ lv2dynparam_host_parameter_appear(
     param_ptr->data.enumeration.selected_value = *(unsigned int *)(param_ptr->value_ptr);
     LOG_DEBUG("Enum parameter with selected value index %u", param_ptr->data.enumeration.selected_value);
     break;
+  case LV2DYNPARAM_PARAMETER_TYPE_INT:
+    param_ptr->data.integer.value = *(signed int *)(param_ptr->value_ptr);
+    LOG_DEBUG("Integer parameter with value %d", param_ptr->data.integer.value);
+    break;
   }
 
   /* read current range */
@@ -227,6 +231,11 @@ lv2dynparam_host_parameter_appear(
     param_ptr->data.fpoint.min = *(float *)(param_ptr->min_ptr);
     param_ptr->data.fpoint.max = *(float *)(param_ptr->max_ptr);
     LOG_DEBUG("Float parameter with range %f - %f", param_ptr->data.fpoint.min, param_ptr->data.fpoint.max);
+    break;
+  case LV2DYNPARAM_PARAMETER_TYPE_INT:
+    param_ptr->data.integer.min = *(signed int *)(param_ptr->min_ptr);
+    param_ptr->data.integer.max = *(signed int *)(param_ptr->max_ptr);
+    LOG_DEBUG("Integer parameter with range %d - %d", param_ptr->data.integer.min, param_ptr->data.integer.max);
     break;
   case LV2DYNPARAM_PARAMETER_TYPE_ENUM:
     param_ptr->data.enumeration.values_count = *(unsigned int *)(param_ptr->max_ptr);

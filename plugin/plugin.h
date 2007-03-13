@@ -126,6 +126,22 @@ typedef BOOL
   unsigned int value_index);
 
 /**
+ * Type for callback function to be called by helper library when integer parameter value is changed by host.
+ * Callee is not allowed to sleep/lock in this callback.
+ *
+ * @param context context supplied by plugin when parameter was added to helper library
+ * @param value new value of changed parameter
+ *
+ * @return Success status
+ * @retval TRUE - success
+ * @retval FALSE - error, try later
+ */
+typedef BOOL
+(*lv2dynparam_plugin_param_int_changed)(
+  void * context,
+  int value);
+
+/**
  * Call this function to add new group.
  * This function will not sleep/lock. It is safe to call it from callbacks
  * for parameter changes and command executions.
@@ -240,6 +256,39 @@ lv2dynparam_plugin_param_enum_add(
   unsigned int values_count,
   unsigned int initial_value_index,
   lv2dynparam_plugin_param_enum_changed callback,
+  void * callback_context,
+  lv2dynparam_plugin_parameter * param_ptr);
+
+/**
+ * Call this function to add new integer parameter.
+ * This function will not sleep/lock. It is safe to call it from callbacks
+ * for parameter changes and command executions.
+ *
+ * @param instance Handle to instance received from lv2dynparam_plugin_instantiate()
+ * @param group Parent group, NULL for root group
+ * @param name Human readble name of group to add
+ * @param hints_ptr Pointer to group hints. Can be NULL (no hints).
+ * @param value initial value of the parameter
+ * @param min minimum allowed value of the parameter
+ * @param max maximum allowed value of the parameter
+ * @param callback callback to be called when host requests value change
+ * @param callback_context context to be supplied as parameter to function supplied by @c callback parameter
+ * @param param_ptr Pointer to variable receiving handle to plugin helper library representation of parameter
+ *
+ * @return Success status
+ * @retval TRUE - success
+ * @retval FALSE - error, try later
+ */
+BOOL
+lv2dynparam_plugin_param_int_add(
+  lv2dynparam_plugin_instance instance,
+  lv2dynparam_plugin_group group,
+  const char * name,
+  const struct lv2dynparam_hints * hints_ptr,
+  signed int value,
+  signed int min,
+  signed int max,
+  lv2dynparam_plugin_param_int_changed callback,
   void * callback_context,
   lv2dynparam_plugin_parameter * param_ptr);
 

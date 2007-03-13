@@ -190,6 +190,13 @@ lv2dynparam_plugin_parameter_change(
     return TRUE;
 
   case LV2DYNPARAM_PARAMETER_TYPE_INT:
+    if (!parameter_ptr->plugin_callback.integer(
+          parameter_ptr->plugin_callback_context,
+          parameter_ptr->data.integer.value))
+    {
+      return FALSE;
+    }
+
     return TRUE;
 
   case LV2DYNPARAM_PARAMETER_TYPE_NOTE:
@@ -422,7 +429,7 @@ lv2dynparam_plugin_param_float_add(
         return FALSE;
       }
 
-      if (param_ptr->type != LV2DYNPARAM_PARAMETER_TYPE_BOOLEAN)
+      if (param_ptr->type != LV2DYNPARAM_PARAMETER_TYPE_FLOAT)
       {
         /* There is pending disappear of parameter with same name but of different type */
         break;
@@ -609,6 +616,107 @@ fail_free_values:
 
 fail:
   return FALSE;
+}
+
+BOOL
+lv2dynparam_plugin_param_int_add(
+  lv2dynparam_plugin_instance instance_handle,
+  lv2dynparam_plugin_group group,
+  const char * name,
+  const struct lv2dynparam_hints * hints_ptr,
+  signed int value,
+  signed int min,
+  signed int max,
+  lv2dynparam_plugin_param_int_changed callback,
+  void * callback_context,
+  lv2dynparam_plugin_parameter * param_handle_ptr)
+{
+  struct lv2dynparam_plugin_parameter * param_ptr;
+  struct lv2dynparam_plugin_group * group_ptr;
+  struct list_head * node_ptr;
+  size_t name_size;
+
+  LOG_DEBUG("lv2dynparam_plugin_param_int_add() called for \"%s\" (%d,%d,%d)", name, value, min, max);
+
+  name_size = strlen(name) + 1;
+  if (name_size >= LV2DYNPARAM_MAX_STRING_SIZE)
+  {
+    assert(0);
+    return FALSE;
+  }
+
+  if (group == NULL)
+  {
+    group_ptr = &instance_ptr->root_group;
+  }
+  else
+  {
+    group_ptr = (struct lv2dynparam_plugin_group *)group;
+  }
+
+  /* Search for same parameter in pending disappear state, and try to reuse it */
+  list_for_each(node_ptr, &group_ptr->child_parameters)
+  {
+    param_ptr = list_entry(node_ptr, struct lv2dynparam_plugin_parameter, siblings);
+
+    assert(param_ptr->group_ptr == group_ptr);
+
+    if (strcmp(param_ptr->name, name) == 0)
+    {
+      if (param_ptr->pending != LV2DYNPARAM_PENDING_DISAPPEAR)
+      {
+        assert(0);                /* groups cannot contain two parameters with same names */
+        return FALSE;
+      }
+
+      if (param_ptr->type != LV2DYNPARAM_PARAMETER_TYPE_INT)
+      {
+        /* There is pending disappear of parameter with same name but of different type */
+        break;
+      }
+
+      param_ptr->data.integer.value = value;
+      param_ptr->data.integer.min = min;
+      param_ptr->data.integer.max = max;
+      param_ptr->plugin_callback.integer = callback;
+      param_ptr->plugin_callback_context = callback_context;
+      param_ptr->pending = LV2DYNPARAM_PENDING_CHANGE;
+
+      *param_handle_ptr = (lv2dynparam_parameter_handle)param_ptr;
+
+      return TRUE;
+    }
+  }
+
+  param_ptr = lv2dynparam_memory_pool_allocate(instance_ptr->parameters_pool);
+  if (param_ptr == NULL)
+  {
+    return FALSE;
+  }
+
+  lv2dynparam_hints_init_empty(&param_ptr->hints);
+
+  param_ptr->type = LV2DYNPARAM_PARAMETER_TYPE_INT;
+
+  memcpy(param_ptr->name, name, name_size);
+
+  param_ptr->group_ptr = group_ptr;
+  param_ptr->data.integer.value = value;
+  param_ptr->data.integer.min = min;
+  param_ptr->data.integer.max = max;
+  param_ptr->plugin_callback.integer = callback;
+  param_ptr->plugin_callback_context = callback_context;
+
+  param_ptr->pending = LV2DYNPARAM_PENDING_APPEAR;
+  instance_ptr->pending++;
+
+  list_add_tail(&param_ptr->siblings, &group_ptr->child_parameters);
+
+  lv2dynparam_plugin_param_notify(instance_ptr, param_ptr);
+
+  *param_handle_ptr = (lv2dynparam_parameter_handle)param_ptr;
+
+  return TRUE;
 }
 
 BOOL

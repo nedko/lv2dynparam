@@ -88,6 +88,12 @@ lv2dynparam_host_map_type_uri(
     return TRUE;
   }
 
+  if (strcmp(parameter_ptr->type_uri, LV2DYNPARAM_PARAMETER_TYPE_INT_URI) == 0)
+  {
+    parameter_ptr->type = LV2DYNPARAM_PARAMETER_TYPE_INT;
+    return TRUE;
+  }
+
   return FALSE;
 }
 
@@ -334,6 +340,18 @@ lv2dynparam_host_notify_parameter_appeared(
       parameter_ptr->data.enumeration.values_count,
       &parameter_ptr->ui_context);
     break;
+  case LV2DYNPARAM_PARAMETER_TYPE_INT:
+    dynparam_parameter_int_appeared(
+      parameter_ptr,
+      instance_ptr->instance_ui_context,
+      parameter_ptr->group_ptr->ui_context,
+      parameter_ptr->name,
+      &parameter_ptr->hints,
+      parameter_ptr->data.integer.value,
+      parameter_ptr->data.integer.min,
+      parameter_ptr->data.integer.max,
+      &parameter_ptr->ui_context);
+    break;
   default:
     assert(0);                  /* unknown parameter type, should be ignored in host callback */
     break;
@@ -361,6 +379,12 @@ lv2dynparam_host_notify_parameter_disappeared(
     break;
   case LV2DYNPARAM_PARAMETER_TYPE_ENUM:
     dynparam_parameter_enum_disappeared(
+      instance_ptr->instance_ui_context,
+      parameter_ptr->group_ptr->ui_context,
+      parameter_ptr->ui_context);
+    break;
+  case LV2DYNPARAM_PARAMETER_TYPE_INT:
+    dynparam_parameter_int_disappeared(
       instance_ptr->instance_ui_context,
       parameter_ptr->group_ptr->ui_context,
       parameter_ptr->ui_context);
@@ -559,6 +583,9 @@ lv2dynparam_host_realtime_run(
       case LV2DYNPARAM_PARAMETER_TYPE_ENUM:
         *((unsigned int *)parameter_ptr->value_ptr) = parameter_ptr->data.enumeration.selected_value;
         break;
+      case LV2DYNPARAM_PARAMETER_TYPE_INT:
+        *((signed int *)parameter_ptr->value_ptr) = parameter_ptr->data.integer.value;
+        break;
       default:
         LOG_ERROR("Parameter change for parameter of unknown type %u received", parameter_ptr->type);
       }
@@ -745,6 +772,31 @@ dynparam_parameter_enum_change(
   message_ptr = lv2dynparam_memory_pool_allocate_sleepy(instance_ptr->messages_pool);
 
   parameter_ptr->data.enumeration.selected_value = selected_index_value;
+
+  message_ptr->message_type = LV2DYNPARAM_HOST_MESSAGE_TYPE_PARAMETER_CHANGE;
+
+  message_ptr->context.parameter = parameter_ptr;
+
+  list_add_tail(&message_ptr->siblings, &instance_ptr->ui_to_realtime_queue);
+
+  audiolock_leave_ui(instance_ptr->lock);
+}
+
+void
+dynparam_parameter_int_change(
+  lv2dynparam_host_instance instance,
+  lv2dynparam_host_parameter parameter_handle,
+  signed int value)
+{
+  struct lv2dynparam_host_message * message_ptr;
+
+  audiolock_enter_ui(instance_ptr->lock);
+
+  LOG_DEBUG("\"%s\" changed to %d", parameter_ptr->name, value);
+
+  message_ptr = lv2dynparam_memory_pool_allocate_sleepy(instance_ptr->messages_pool);
+
+  parameter_ptr->data.integer.value = value;
 
   message_ptr->message_type = LV2DYNPARAM_HOST_MESSAGE_TYPE_PARAMETER_CHANGE;
 

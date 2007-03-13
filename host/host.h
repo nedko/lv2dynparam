@@ -349,6 +349,47 @@ dynparam_parameter_enum_disappeared(
   void * parameter_ui_context);
 
 /**
+ * Callback called from UI thread to notify UI about integer parameter appear.
+ *
+ * @param parameter_handle Handle to host helper library representation of
+ * parametr that appeared
+ * @param instance_ui_context User context to be associated with instance,
+ * as supplied previously to lv2dynparam_host_attach()
+ * @param group_ui_context User context of parent group, NULL for root group.
+ * @param parameter_name Name of parameter that is appearing
+ * @param hints_ptr Pointer to parameter hints.
+ * @param value Initial value of the appearing parameter
+ * @param min Minimum allowed value of the appearing parameter
+ * @param max Maximum allowed value of the appearing parameter
+ * @param parameter_ui_context Pointer to variable receiving UI context of appeared parameter.
+ */
+void
+dynparam_parameter_int_appeared(
+  lv2dynparam_host_parameter parameter_handle,
+  void * instance_ui_context,
+  void * group_ui_context,
+  const char * parameter_name,
+  const struct lv2dynparam_hints * hints_ptr,
+  signed int value,
+  signed int min,
+  signed int max,
+  void ** parameter_ui_context);
+
+/**
+ * Callback called from UI thread to notify UI about integer parameter disappear.
+ *
+ * @param instance_ui_context user context to be associated with instance,
+ * as supplied previously to lv2dynparam_host_attach()
+ * @param parent_group_ui_context user context of parent group, NULL for root group.
+ * @param parameter_ui_context user context of parameter that disappeared.
+ */
+void
+dynparam_parameter_int_disappeared(
+  void * instance_ui_context,
+  void * parent_group_ui_context,
+  void * parameter_ui_context);
+
+/**
  * Callback called from UI thread to notify UI about boolean parameter value change.
  *
  * @param instance_ui_context user context to be associated with instance,
@@ -406,5 +447,20 @@ dynparam_parameter_enum_change(
   lv2dynparam_host_instance instance,
   lv2dynparam_host_parameter parameter_handle,
   unsigned int selected_index_value);
+
+/**
+ * Call this function to change integer parameter value.
+ * Must be called from the UI thread.
+ * This function may sleep/lock.
+ *
+ * @param instance Handle to instance received from lv2dynparam_host_attach()
+ * @param parameter_handle handle of parameter which value will be changed
+ * @param value the new value
+ */
+void
+dynparam_parameter_int_change(
+  lv2dynparam_host_instance instance,
+  lv2dynparam_host_parameter parameter_handle,
+  signed int value);
 
 #endif /* #ifndef DYNPARAM_H__5090F477_0BE7_439F_BF1D_F2EB78822760__INCLUDED */

@@ -72,9 +72,9 @@ struct lv2dynparam_plugin_parameter
     } fpoint;
     struct
     {
-      int value;
-      int min;
-      int max;
+      signed int value;
+      signed int min;
+      signed int max;
     } integer;
     struct
     {
@@ -102,6 +102,7 @@ struct lv2dynparam_plugin_parameter
     lv2dynparam_plugin_param_boolean_changed boolean;
     lv2dynparam_plugin_param_float_changed fpoint;
     lv2dynparam_plugin_param_enum_changed enumeration;
+    lv2dynparam_plugin_param_int_changed integer;
   } plugin_callback;
   void * plugin_callback_context;
 

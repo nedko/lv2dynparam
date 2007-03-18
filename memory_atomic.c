@@ -153,6 +153,7 @@ lv2dynparam_memory_pool_allocate(
   node_ptr = pool_ptr->unused.next;
   list_del(node_ptr);
   pool_ptr->unused_count--;
+  pool_ptr->used_count++;
 
   return (node_ptr + 1);
 }

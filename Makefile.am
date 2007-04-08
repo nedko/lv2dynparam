@@ -8,5 +8,7 @@ lv2dynparam_include_HEADERS = audiolock.h lv2.h lv2dynparam.h host/host.h plugin
 
 pkginclude_HEADERS = $(lv2dynparam_include_HEADERS)
 
+EXTRA_DIST = $(lv2dynparam_include_HEADERS) list.h helpers.h hint_set.h log.h memory_atomic.h
+
 # adding doxygen support
 include $(top_srcdir)/aminclude.am

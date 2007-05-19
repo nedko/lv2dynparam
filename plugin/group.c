@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <stdbool.h>
 
 #include "../lv2.h"
 #include "../lv2dynparam.h"
@@ -34,7 +35,7 @@
 #define LOG_LEVEL LOG_LEVEL_ERROR
 #include "../log.h"
 
-BOOL
+bool
 lv2dynparam_plugin_group_init(
   struct lv2dynparam_plugin_instance * instance_ptr,
   struct lv2dynparam_plugin_group * group_ptr,
@@ -51,7 +52,7 @@ lv2dynparam_plugin_group_init(
   if (name_size >= LV2DYNPARAM_MAX_STRING_SIZE)
   {
     assert(0);
-    return FALSE;
+    return false;
   }
 
   if (hints_ptr != NULL)
@@ -71,7 +72,7 @@ lv2dynparam_plugin_group_init(
 
     if (!lv2dynparam_hints_init_copy(instance_ptr->memory, hints_ptr, &group_ptr->hints))
     {
-      return FALSE;
+      return false;
     }
   }
   else
@@ -87,10 +88,10 @@ lv2dynparam_plugin_group_init(
   group_ptr->pending = LV2DYNPARAM_PENDING_APPEAR;
   instance_ptr->pending++;
 
-  return TRUE;
+  return true;
 }
 
-BOOL
+bool
 lv2dynparam_plugin_group_new(
   struct lv2dynparam_plugin_instance * instance_ptr,
   struct lv2dynparam_plugin_group * parent_group_ptr,
@@ -98,19 +99,19 @@ lv2dynparam_plugin_group_new(
   const struct lv2dynparam_hints * hints_ptr,
   struct lv2dynparam_plugin_group ** group_ptr_ptr)
 {
-  BOOL ret;
+  bool ret;
   struct lv2dynparam_plugin_group * group_ptr;
 
-  group_ptr = lv2dynparam_memory_pool_allocate(instance_ptr->groups_pool);
+  group_ptr = rtsafe_memory_pool_allocate(instance_ptr->groups_pool);
   if (group_ptr == NULL)
   {
-    ret = FALSE;
+    ret = false;
     goto exit;
   }
 
   if (!lv2dynparam_plugin_group_init(instance_ptr, group_ptr, parent_group_ptr, hints_ptr, name))
   {
-    ret = FALSE;
+    ret = false;
     goto free;
   }
 
@@ -118,10 +119,10 @@ lv2dynparam_plugin_group_new(
 
   *group_ptr_ptr = group_ptr;
 
-  return TRUE;
+  return true;
 
 free:
-  lv2dynparam_memory_pool_deallocate(instance_ptr->groups_pool, group_ptr);
+  rtsafe_memory_pool_deallocate(instance_ptr->groups_pool, group_ptr);
 
 exit:
   return ret;
@@ -166,7 +167,7 @@ lv2dynparam_plugin_group_free(
 {
   lv2dynparam_plugin_group_clean(instance_ptr, group_ptr);
   LOG_DEBUG("Freeing group \"%s\"", group_ptr->name);
-  lv2dynparam_memory_pool_deallocate(instance_ptr->groups_pool, group_ptr);
+  rtsafe_memory_pool_deallocate(instance_ptr->groups_pool, group_ptr);
 }
 
 void
@@ -258,7 +259,7 @@ lv2dynparam_plugin_group_get_name(
 #define parent_group_ptr ((struct lv2dynparam_plugin_group *)parent_group)
 #define instance_ptr ((struct lv2dynparam_plugin_instance *)instance_handle)
 
-BOOL
+bool
 lv2dynparam_plugin_group_add(
   lv2dynparam_plugin_instance instance_handle,
   lv2dynparam_plugin_group parent_group,
@@ -277,7 +278,7 @@ lv2dynparam_plugin_group_add(
         hints_ptr,
         &group_ptr))
   {
-    return FALSE;
+    return false;
   }
 
   lv2dynparam_plugin_group_notify(instance_ptr, group_ptr);
@@ -286,5 +287,5 @@ lv2dynparam_plugin_group_add(
 
   LOG_DEBUG("lv2dynparam_plugin_group_add() for \"%s\" leave", name);
 
-  return TRUE;
+  return true;
 }

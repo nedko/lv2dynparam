@@ -22,6 +22,7 @@
 
 #include <string.h>
 #include <assert.h>
+#include <stdbool.h>
 
 #include "../lv2.h"
 #include "../lv2dynparam.h"
@@ -53,7 +54,7 @@ lv2dynparam_plugin_parameter_free(
   }
 
   lv2dynparam_hints_clear(&param_ptr->hints);
-  lv2dynparam_memory_pool_deallocate(instance_ptr->parameters_pool, param_ptr);
+  rtsafe_memory_pool_deallocate(instance_ptr->parameters_pool, param_ptr);
 }
 
 #define parameter_ptr ((struct lv2dynparam_plugin_parameter *)parameter)
@@ -184,39 +185,39 @@ lv2dynparam_plugin_parameter_change(
           parameter_ptr->plugin_callback_context,
           parameter_ptr->data.fpoint.value))
     {
-      return FALSE;
+      return false;
     }
 
-    return TRUE;
+    return true;
 
   case LV2DYNPARAM_PARAMETER_TYPE_INT:
     if (!parameter_ptr->plugin_callback.integer(
           parameter_ptr->plugin_callback_context,
           parameter_ptr->data.integer.value))
     {
-      return FALSE;
+      return false;
     }
 
-    return TRUE;
+    return true;
 
   case LV2DYNPARAM_PARAMETER_TYPE_NOTE:
-    return TRUE;
+    return true;
 
   case LV2DYNPARAM_PARAMETER_TYPE_STRING:
-    return TRUE;
+    return true;
 
   case LV2DYNPARAM_PARAMETER_TYPE_FILENAME:
-    return TRUE;
+    return true;
 
   case LV2DYNPARAM_PARAMETER_TYPE_BOOLEAN:
     if (!parameter_ptr->plugin_callback.boolean(
           parameter_ptr->plugin_callback_context,
           parameter_ptr->data.boolean))
     {
-      return FALSE;
+      return false;
     }
 
-    return TRUE;
+    return true;
 
   case LV2DYNPARAM_PARAMETER_TYPE_ENUM:
     if (!parameter_ptr->plugin_callback.enumeration(
@@ -224,16 +225,16 @@ lv2dynparam_plugin_parameter_change(
           parameter_ptr->data.enumeration.values[parameter_ptr->data.enumeration.selected_value],
           parameter_ptr->data.enumeration.selected_value))
     {
-      return FALSE;
+      return false;
     }
 
-    return TRUE;
+    return true;
 
   default:
     assert(0);
   }
 
-  return TRUE;
+  return true;
 }
 
 void
@@ -283,7 +284,7 @@ lv2dynparam_plugin_param_notify(
 
 #define instance_ptr ((struct lv2dynparam_plugin_instance *)instance_handle)
 
-BOOL
+bool
 lv2dynparam_plugin_param_boolean_add(
   lv2dynparam_plugin_instance instance_handle,
   lv2dynparam_plugin_group group,
@@ -305,7 +306,7 @@ lv2dynparam_plugin_param_boolean_add(
   if (name_size >= LV2DYNPARAM_MAX_STRING_SIZE)
   {
     assert(0);
-    return FALSE;
+    return false;
   }
 
   if (group == NULL)
@@ -329,7 +330,7 @@ lv2dynparam_plugin_param_boolean_add(
       if (param_ptr->pending != LV2DYNPARAM_PENDING_DISAPPEAR)
       {
         assert(0);                /* groups cannot contain two parameters with same names */
-        return FALSE;
+        return false;
       }
 
       if (param_ptr->type != LV2DYNPARAM_PARAMETER_TYPE_BOOLEAN)
@@ -345,14 +346,14 @@ lv2dynparam_plugin_param_boolean_add(
 
       *param_handle_ptr = (lv2dynparam_parameter_handle)param_ptr;
 
-      return TRUE;
+      return true;
     }
   }
 
-  param_ptr = lv2dynparam_memory_pool_allocate(instance_ptr->parameters_pool);
+  param_ptr = rtsafe_memory_pool_allocate(instance_ptr->parameters_pool);
   if (param_ptr == NULL)
   {
-    return FALSE;
+    return false;
   }
 
   lv2dynparam_hints_init_empty(&param_ptr->hints);
@@ -375,10 +376,10 @@ lv2dynparam_plugin_param_boolean_add(
 
   *param_handle_ptr = (lv2dynparam_parameter_handle)param_ptr;
 
-  return TRUE;
+  return true;
 }
 
-BOOL
+bool
 lv2dynparam_plugin_param_float_add(
   lv2dynparam_plugin_instance instance_handle,
   lv2dynparam_plugin_group group,
@@ -402,7 +403,7 @@ lv2dynparam_plugin_param_float_add(
   if (name_size >= LV2DYNPARAM_MAX_STRING_SIZE)
   {
     assert(0);
-    return FALSE;
+    return false;
   }
 
   if (group == NULL)
@@ -426,7 +427,7 @@ lv2dynparam_plugin_param_float_add(
       if (param_ptr->pending != LV2DYNPARAM_PENDING_DISAPPEAR)
       {
         assert(0);                /* groups cannot contain two parameters with same names */
-        return FALSE;
+        return false;
       }
 
       if (param_ptr->type != LV2DYNPARAM_PARAMETER_TYPE_FLOAT)
@@ -444,14 +445,14 @@ lv2dynparam_plugin_param_float_add(
 
       *param_handle_ptr = (lv2dynparam_parameter_handle)param_ptr;
 
-      return TRUE;
+      return true;
     }
   }
 
-  param_ptr = lv2dynparam_memory_pool_allocate(instance_ptr->parameters_pool);
+  param_ptr = rtsafe_memory_pool_allocate(instance_ptr->parameters_pool);
   if (param_ptr == NULL)
   {
-    return FALSE;
+    return false;
   }
 
   lv2dynparam_hints_init_empty(&param_ptr->hints);
@@ -476,10 +477,10 @@ lv2dynparam_plugin_param_float_add(
 
   *param_handle_ptr = (lv2dynparam_parameter_handle)param_ptr;
 
-  return TRUE;
+  return true;
 }
 
-BOOL
+bool
 lv2dynparam_plugin_param_enum_add(
   lv2dynparam_plugin_instance instance_handle,
   lv2dynparam_plugin_group group,
@@ -554,10 +555,10 @@ lv2dynparam_plugin_param_enum_add(
 
       for (i = 0 ; i < param_ptr->data.enumeration.values_count ; i++)
       {
-        lv2dynparam_memory_deallocate(param_ptr->data.enumeration.values[i]);
+        rtsafe_memory_deallocate(param_ptr->data.enumeration.values[i]);
       }
 
-      lv2dynparam_memory_deallocate(param_ptr->data.enumeration.values);
+      rtsafe_memory_deallocate(param_ptr->data.enumeration.values);
 
       /* update parameter data... */
       param_ptr->data.enumeration.values = values;
@@ -570,11 +571,11 @@ lv2dynparam_plugin_param_enum_add(
 
       *param_handle_ptr = (lv2dynparam_parameter_handle)param_ptr;
 
-      return TRUE;
+      return true;
     }
   }
 
-  param_ptr = lv2dynparam_memory_pool_allocate(instance_ptr->parameters_pool);
+  param_ptr = rtsafe_memory_pool_allocate(instance_ptr->parameters_pool);
   if (param_ptr == NULL)
   {
     goto fail_free_values;
@@ -604,21 +605,21 @@ lv2dynparam_plugin_param_enum_add(
 
   *param_handle_ptr = (lv2dynparam_parameter_handle)param_ptr;
 
-  return TRUE;
+  return true;
 
 fail_free_values:
   for (i = 0 ; i < values_count ; i++)
   {
-    lv2dynparam_memory_deallocate(values[i]);
+    rtsafe_memory_deallocate(values[i]);
   }
 
-  lv2dynparam_memory_deallocate(values);
+  rtsafe_memory_deallocate(values);
 
 fail:
-  return FALSE;
+  return false;
 }
 
-BOOL
+bool
 lv2dynparam_plugin_param_int_add(
   lv2dynparam_plugin_instance instance_handle,
   lv2dynparam_plugin_group group,
@@ -642,7 +643,7 @@ lv2dynparam_plugin_param_int_add(
   if (name_size >= LV2DYNPARAM_MAX_STRING_SIZE)
   {
     assert(0);
-    return FALSE;
+    return false;
   }
 
   if (group == NULL)
@@ -666,7 +667,7 @@ lv2dynparam_plugin_param_int_add(
       if (param_ptr->pending != LV2DYNPARAM_PENDING_DISAPPEAR)
       {
         assert(0);                /* groups cannot contain two parameters with same names */
-        return FALSE;
+        return false;
       }
 
       if (param_ptr->type != LV2DYNPARAM_PARAMETER_TYPE_INT)
@@ -684,14 +685,14 @@ lv2dynparam_plugin_param_int_add(
 
       *param_handle_ptr = (lv2dynparam_parameter_handle)param_ptr;
 
-      return TRUE;
+      return true;
     }
   }
 
-  param_ptr = lv2dynparam_memory_pool_allocate(instance_ptr->parameters_pool);
+  param_ptr = rtsafe_memory_pool_allocate(instance_ptr->parameters_pool);
   if (param_ptr == NULL)
   {
-    return FALSE;
+    return false;
   }
 
   lv2dynparam_hints_init_empty(&param_ptr->hints);
@@ -716,10 +717,10 @@ lv2dynparam_plugin_param_int_add(
 
   *param_handle_ptr = (lv2dynparam_parameter_handle)param_ptr;
 
-  return TRUE;
+  return true;
 }
 
-BOOL
+bool
 lv2dynparam_plugin_param_remove(
   lv2dynparam_plugin_instance instance_handle,
   lv2dynparam_plugin_parameter parameter)
@@ -730,12 +731,12 @@ lv2dynparam_plugin_param_remove(
     instance_ptr->pending--;
     list_del(&parameter_ptr->siblings);
     lv2dynparam_plugin_parameter_free(instance_ptr, parameter_ptr);
-    return TRUE;
+    return true;
   }
 
   parameter_ptr->pending = LV2DYNPARAM_PENDING_DISAPPEAR;
   instance_ptr->pending++;
   lv2dynparam_plugin_param_notify(instance_ptr, parameter_ptr);
 
-  return TRUE;
+  return true;
 }

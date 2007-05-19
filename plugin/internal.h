@@ -114,7 +114,7 @@ struct lv2dynparam_plugin_parameter
 struct lv2dynparam_plugin_instance
 {
   struct list_head siblings;
-  lv2dynparam_memory_handle memory;
+  rtsafe_memory_handle memory;
   LV2_Handle lv2instance;
   struct lv2dynparam_plugin_group root_group;
   struct lv2dynparam_host_callbacks * host_callbacks;
@@ -122,8 +122,8 @@ struct lv2dynparam_plugin_instance
 
   unsigned int pending;
 
-  lv2dynparam_memory_pool_handle groups_pool;
-  lv2dynparam_memory_pool_handle parameters_pool;
+  rtsafe_memory_pool_handle groups_pool;
+  rtsafe_memory_pool_handle parameters_pool;
 };
 
 unsigned char
@@ -136,7 +136,7 @@ void
 lv2dynparam_plugin_host_detach(
   LV2_Handle instance);
 
-BOOL
+bool
 lv2dynparam_plugin_group_init(
   struct lv2dynparam_plugin_instance * instance_ptr,
   struct lv2dynparam_plugin_group * group_ptr,

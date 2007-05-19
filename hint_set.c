@@ -23,10 +23,10 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <assert.h>
+#include <stdbool.h>
 
 #include "lv2.h"
 #include "lv2dynparam.h"
-#include "types.h"
 #include "memory_atomic.h"
 #include "hint_set.h"
 #include "helpers.h"
@@ -40,9 +40,9 @@ lv2dynparam_hints_init_empty(
   hints_ptr->values = NULL;
 }
 
-BOOL
+bool
 lv2dynparam_hints_init_va_link(
-  lv2dynparam_memory_handle memory,
+  rtsafe_memory_handle memory,
   struct lv2dynparam_hints * hints_ptr,
   ...)
 {
@@ -70,22 +70,22 @@ lv2dynparam_hints_init_va_link(
   {
     hints_ptr->names = NULL;
     hints_ptr->values = NULL;
-    return TRUE;
+    return true;
   }
 
   /* allocate names and values arrays */
 
-  hints_ptr->names = lv2dynparam_memory_allocate(memory, count * sizeof(char *));
+  hints_ptr->names = rtsafe_memory_allocate(memory, count * sizeof(char *));
   if (hints_ptr->names == NULL)
   {
-    return FALSE;
+    return false;
   }
 
-  hints_ptr->values = lv2dynparam_memory_allocate(memory, count * sizeof(char *));
+  hints_ptr->values = rtsafe_memory_allocate(memory, count * sizeof(char *));
   if (hints_ptr->values == NULL)
   {
-    lv2dynparam_memory_deallocate(hints_ptr->names);
-    return FALSE;
+    rtsafe_memory_deallocate(hints_ptr->names);
+    return false;
   }
 
   /* fill the names and values arrays */
@@ -97,7 +97,7 @@ loop:
   if (hints_ptr->names[index] == NULL)
   {
     va_end(ap);
-    return TRUE;
+    return true;
   }
 
   hints_ptr->values[index] = va_arg(ap, char *);
@@ -106,9 +106,9 @@ loop:
   goto loop;
 }
 
-BOOL
+bool
 lv2dynparam_hints_init_va_dup(
-  lv2dynparam_memory_handle memory,
+  rtsafe_memory_handle memory,
   struct lv2dynparam_hints * hints_ptr,
   ...)
 {
@@ -137,18 +137,18 @@ lv2dynparam_hints_init_va_dup(
   {
     hints_ptr->names = NULL;
     hints_ptr->values = NULL;
-    return TRUE;
+    return true;
   }
 
   /* allocate names and values arrays */
 
-  hints_ptr->names = lv2dynparam_memory_allocate(memory, count * sizeof(char *));
+  hints_ptr->names = rtsafe_memory_allocate(memory, count * sizeof(char *));
   if (hints_ptr->names == NULL)
   {
     goto fail;
   }
 
-  hints_ptr->values = lv2dynparam_memory_allocate(memory, count * sizeof(char *));
+  hints_ptr->values = rtsafe_memory_allocate(memory, count * sizeof(char *));
   if (hints_ptr->values == NULL)
   {
     goto fail_deallocate_names_array;
@@ -167,7 +167,7 @@ loop:
   if (name == NULL)
   {
     va_end(ap);
-    return TRUE;
+    return true;
   }
 
   hints_ptr->names[index] = lv2dynparam_strdup_atomic(memory, name);
@@ -186,7 +186,7 @@ loop:
     hints_ptr->values[index] = lv2dynparam_strdup_atomic(memory, value);
     if (hints_ptr->values[index] == NULL)
     {
-      lv2dynparam_memory_deallocate(hints_ptr->names[index]);
+      rtsafe_memory_deallocate(hints_ptr->names[index]);
       goto fail_cleanup_arrays;
     }
   }
@@ -201,26 +201,26 @@ fail_cleanup_arrays:
   {
     index--;
 
-    lv2dynparam_memory_deallocate(hints_ptr->names[index]);
+    rtsafe_memory_deallocate(hints_ptr->names[index]);
 
     if (hints_ptr->values[index] != NULL)
     {
-      lv2dynparam_memory_deallocate(hints_ptr->values[index]);
+      rtsafe_memory_deallocate(hints_ptr->values[index]);
     }
   }
 
-  lv2dynparam_memory_deallocate(hints_ptr->values);
+  rtsafe_memory_deallocate(hints_ptr->values);
 
 fail_deallocate_names_array:
-  lv2dynparam_memory_deallocate(hints_ptr->names);
+  rtsafe_memory_deallocate(hints_ptr->names);
 
 fail:
-  return FALSE;
+  return false;
 }
 
-BOOL
+bool
 lv2dynparam_hints_init_copy(
-  lv2dynparam_memory_handle memory,
+  rtsafe_memory_handle memory,
   const struct lv2dynparam_hints * src_hints_ptr,
   struct lv2dynparam_hints * dest_hints_ptr)
 {
@@ -232,18 +232,18 @@ lv2dynparam_hints_init_copy(
   {
     dest_hints_ptr->names = NULL;
     dest_hints_ptr->values = NULL;
-    return TRUE;
+    return true;
   }
 
   /* allocate names and values arrays */
 
-  dest_hints_ptr->names = lv2dynparam_memory_allocate(memory, src_hints_ptr->count * sizeof(char *));
+  dest_hints_ptr->names = rtsafe_memory_allocate(memory, src_hints_ptr->count * sizeof(char *));
   if (dest_hints_ptr->names == NULL)
   {
     goto fail;
   }
 
-  dest_hints_ptr->values = lv2dynparam_memory_allocate(memory, src_hints_ptr->count * sizeof(char *));
+  dest_hints_ptr->values = rtsafe_memory_allocate(memory, src_hints_ptr->count * sizeof(char *));
   if (dest_hints_ptr->values == NULL)
   {
     goto fail_deallocate_names_array;
@@ -268,34 +268,34 @@ lv2dynparam_hints_init_copy(
       dest_hints_ptr->values[index] = lv2dynparam_strdup_atomic(memory, src_hints_ptr->values[index]);
       if (dest_hints_ptr->values[index] == NULL)
       {
-        lv2dynparam_memory_deallocate(dest_hints_ptr->names[index]);
+        rtsafe_memory_deallocate(dest_hints_ptr->names[index]);
         goto fail_cleanup_arrays;
       }
     }
   }
 
-  return TRUE;
+  return true;
 
 fail_cleanup_arrays:
   while (index > 0)
   {
     index--;
 
-    lv2dynparam_memory_deallocate(dest_hints_ptr->names[index]);
+    rtsafe_memory_deallocate(dest_hints_ptr->names[index]);
 
     if (dest_hints_ptr->values[index] != NULL)
     {
-      lv2dynparam_memory_deallocate(dest_hints_ptr->values[index]);
+      rtsafe_memory_deallocate(dest_hints_ptr->values[index]);
     }
   }
 
-  lv2dynparam_memory_deallocate(dest_hints_ptr->values);
+  rtsafe_memory_deallocate(dest_hints_ptr->values);
 
 fail_deallocate_names_array:
-  lv2dynparam_memory_deallocate(dest_hints_ptr->names);
+  rtsafe_memory_deallocate(dest_hints_ptr->names);
 
 fail:
-  return FALSE;
+  return false;
 }
 
 void
@@ -306,21 +306,21 @@ lv2dynparam_hints_clear(
   {
     hints_ptr->count--;
 
-    lv2dynparam_memory_deallocate(hints_ptr->names[hints_ptr->count]);
+    rtsafe_memory_deallocate(hints_ptr->names[hints_ptr->count]);
 
     if (hints_ptr->values[hints_ptr->count] != NULL)
     {
-      lv2dynparam_memory_deallocate(hints_ptr->values[hints_ptr->count]);
+      rtsafe_memory_deallocate(hints_ptr->values[hints_ptr->count]);
     }
   }
 
   if (hints_ptr->names != NULL)
   {
-    lv2dynparam_memory_deallocate(hints_ptr->names);
+    rtsafe_memory_deallocate(hints_ptr->names);
   }
 
   if (hints_ptr->values != NULL)
   {
-    lv2dynparam_memory_deallocate(hints_ptr->values);
+    rtsafe_memory_deallocate(hints_ptr->values);
   }
 }

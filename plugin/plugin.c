@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <stdbool.h>
 
 #include "../lv2.h"
 #include "../lv2dynparam.h"
@@ -61,49 +62,52 @@ get_lv2dynparam_plugin_extension_data(void)
   return &g_lv2dynparam_plugin_callbacks;
 }
 
-BOOL
+bool
 lv2dynparam_plugin_instantiate(
   LV2_Handle lv2instance,
   const char * root_group_name,
   lv2dynparam_plugin_instance * instance_handle_ptr)
 {
-  BOOL ret;
+  bool ret;
   struct lv2dynparam_plugin_instance * instance_ptr;
 
   instance_ptr = malloc(sizeof(struct lv2dynparam_plugin_instance));
   if (instance_ptr == NULL)
   {
-    ret = FALSE;
+    ret = false;
     goto exit;
   }
 
-  if (!lv2dynparam_memory_init(
+  if (!rtsafe_memory_init(
         64 * 1024,
         100,
         1000,
+        false,
         &instance_ptr->memory))
   {
-    ret = FALSE;
+    ret = false;
     goto free_instance;
   }
 
-  if (!lv2dynparam_memory_pool_create(
+  if (!rtsafe_memory_pool_create(
         sizeof(struct lv2dynparam_plugin_group),
         100,
         1000,
+        false,
         &instance_ptr->groups_pool))
   {
-    ret = FALSE;
+    ret = false;
     goto free_uninit_memory;
   }
 
-  if (!lv2dynparam_memory_pool_create(
+  if (!rtsafe_memory_pool_create(
         sizeof(struct lv2dynparam_plugin_parameter),
         100,
         1000,
+        false,
         &instance_ptr->parameters_pool))
   {
-    ret = FALSE;
+    ret = false;
     goto free_destroy_groups_pool;
   }
 
@@ -116,7 +120,7 @@ lv2dynparam_plugin_instantiate(
         NULL,
         root_group_name))
   {
-    ret = FALSE;
+    ret = false;
     goto free_destroy_parameters_pool;
   }
 
@@ -128,7 +132,7 @@ lv2dynparam_plugin_instantiate(
 
   *instance_handle_ptr = instance_ptr;
 
-  ret = TRUE;
+  ret = true;
   goto exit;
 
 free_destroy_parameters_pool:
@@ -162,7 +166,7 @@ lv2dynparam_plugin_host_attach(
     }
   }
 
-  return FALSE;
+  return false;
 
 instance_found:
   instance_ptr->host_callbacks = host_callbacks;
@@ -174,7 +178,7 @@ instance_found:
     lv2dynparam_plugin_group_notify(instance_ptr, &instance_ptr->root_group);
   }
 
-  return TRUE;
+  return true;
 }
 
 #define instance_ptr ((struct lv2dynparam_plugin_instance *)instance_handle)
@@ -185,8 +189,8 @@ lv2dynparam_plugin_cleanup(
 {
   list_del(&instance_ptr->siblings);
   lv2dynparam_plugin_group_clean(instance_ptr, &instance_ptr->root_group);
-  lv2dynparam_memory_pool_destroy(instance_ptr->parameters_pool);
-  lv2dynparam_memory_pool_destroy(instance_ptr->groups_pool);
-  lv2dynparam_memory_uninit(instance_ptr->memory);
+  rtsafe_memory_pool_destroy(instance_ptr->parameters_pool);
+  rtsafe_memory_pool_destroy(instance_ptr->groups_pool);
+  rtsafe_memory_uninit(instance_ptr->memory);
   free(instance_ptr);
 }

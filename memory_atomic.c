@@ -2,7 +2,6 @@
 /*****************************************************************************
  *
  *   Non-sleeping memory allocation
- *   This file is part of lv2dynparam libraries
  *
  *   Copyright (C) 2006,2007 Nedko Arnaudov <nedko@arnaudov.name>
  *
@@ -23,71 +22,91 @@
 
 #include <stdlib.h>
 #include <assert.h>
+#include <stdbool.h>
+#include <pthread.h>
 
-#include "types.h"
 #include "memory_atomic.h"
 #include "list.h"
-//#define LOG_LEVEL LOG_LEVEL_DEBUG
 #include "log.h"
 
-struct lv2dynparam_memory_pool
+struct rtsafe_memory_pool
 {
   size_t data_size;
   size_t min_preallocated;
   size_t max_preallocated;
 
-  struct list_head used;
   unsigned int used_count;
-
   struct list_head unused;
   unsigned int unused_count;
+
+  bool enforce_thread_safety;
+  /* next members are initialized/used only if enforce_thread_safety is true */
+  pthread_mutex_t mutex;
+  unsigned int unused_count2;
+  struct list_head pending;
 };
 
-#define LV2DYNPARAM_GROUPS_PREALLOCATE      1024
+#define RTSAFE_GROUPS_PREALLOCATE      1024
 
-BOOL
-lv2dynparam_memory_pool_create(
+bool
+rtsafe_memory_pool_create(
   size_t data_size,
   size_t min_preallocated,
   size_t max_preallocated,
-  lv2dynparam_memory_pool_handle * pool_handle_ptr)
+  bool enforce_thread_safety,
+  rtsafe_memory_pool_handle * pool_handle_ptr)
 {
-  struct lv2dynparam_memory_pool * pool_ptr;
+  int ret;
+  struct rtsafe_memory_pool * pool_ptr;
 
   assert(min_preallocated <= max_preallocated);
 
-  pool_ptr = malloc(sizeof(struct lv2dynparam_memory_pool));
+  pool_ptr = malloc(sizeof(struct rtsafe_memory_pool));
   if (pool_ptr == NULL)
   {
-    return FALSE;
+    return false;
   }
 
   pool_ptr->data_size = data_size;
   pool_ptr->min_preallocated = min_preallocated;
   pool_ptr->max_preallocated = max_preallocated;
 
-  INIT_LIST_HEAD(&pool_ptr->used);
   pool_ptr->used_count = 0;
 
   INIT_LIST_HEAD(&pool_ptr->unused);
   pool_ptr->unused_count = 0;
 
-  lv2dynparam_memory_pool_sleepy((lv2dynparam_memory_pool_handle)pool_ptr);
+  pool_ptr->enforce_thread_safety = enforce_thread_safety;
+  if (enforce_thread_safety)
+  {
+    ret = pthread_mutex_init(&pool_ptr->mutex, NULL);
+    if (ret != 0)
+    {
+      free(pool_ptr);
+      return false;
+    }
+
+    INIT_LIST_HEAD(&pool_ptr->pending);
+    pool_ptr->unused_count2 = 0;
+  }
+
+  rtsafe_memory_pool_sleepy((rtsafe_memory_pool_handle)pool_ptr);
   *pool_handle_ptr = pool_ptr;
 
-  return TRUE;
+  return true;
 }
 
-#define pool_ptr ((struct lv2dynparam_memory_pool *)pool_handle)
+#define pool_ptr ((struct rtsafe_memory_pool *)pool_handle)
 
 void
-lv2dynparam_memory_pool_destroy(
-  lv2dynparam_memory_pool_handle pool_handle)
+rtsafe_memory_pool_destroy(
+  rtsafe_memory_pool_handle pool_handle)
 {
+  int ret;
   struct list_head * node_ptr;
 
-  assert(pool_ptr->used_count == 0); /* called should deallocate all chunks prior releasing pool itself */
-  assert(list_empty(&pool_ptr->used));
+  /* caller should deallocate all chunks prior releasing pool itself */
+  assert(pool_ptr->used_count == 0);
 
   while (pool_ptr->unused_count != 0)
   {
@@ -103,45 +122,98 @@ lv2dynparam_memory_pool_destroy(
 
   assert(list_empty(&pool_ptr->unused));
 
+  if (pool_ptr->enforce_thread_safety)
+  {
+    while (!list_empty(&pool_ptr->pending))
+    {
+      node_ptr = pool_ptr->pending.next;
+
+      list_del(node_ptr);
+
+      free(node_ptr);
+    }
+
+    ret = pthread_mutex_destroy(&pool_ptr->mutex);
+    assert(ret == 0);
+  }
+
   free(pool_ptr);
 }
 
 /* adjust unused list size */
 void
-lv2dynparam_memory_pool_sleepy(
-  lv2dynparam_memory_pool_handle pool_handle)
+rtsafe_memory_pool_sleepy(
+  rtsafe_memory_pool_handle pool_handle)
 {
   struct list_head * node_ptr;
+  unsigned int count;
 
-  while (pool_ptr->unused_count < pool_ptr->min_preallocated)
+  if (pool_ptr->enforce_thread_safety)
   {
-    node_ptr = malloc(sizeof(struct list_head) + pool_ptr->data_size);
-    if (node_ptr == NULL)
+    pthread_mutex_lock(&pool_ptr->mutex);
+
+    count = pool_ptr->unused_count2;
+
+    assert(pool_ptr->min_preallocated < pool_ptr->max_preallocated);
+
+    while (count < pool_ptr->min_preallocated)
     {
-      return;
+      node_ptr = malloc(sizeof(struct list_head) + pool_ptr->data_size);
+      if (node_ptr == NULL)
+      {
+        break;
+      }
+
+      list_add_tail(node_ptr, &pool_ptr->pending);
+
+      count++;
     }
 
-    list_add_tail(node_ptr, &pool_ptr->unused);
-    pool_ptr->unused_count++;
+    while (count > pool_ptr->max_preallocated && !list_empty(&pool_ptr->pending))
+    {
+      node_ptr = pool_ptr->pending.next;
+
+      list_del(node_ptr);
+
+      free(node_ptr);
+
+      count--;
+    }
+
+    pthread_mutex_unlock(&pool_ptr->mutex);
   }
-
-  while (pool_ptr->unused_count > pool_ptr->max_preallocated)
+  else
   {
-    assert(!list_empty(&pool_ptr->unused));
+    while (pool_ptr->unused_count < pool_ptr->min_preallocated)
+    {
+      node_ptr = malloc(sizeof(struct list_head) + pool_ptr->data_size);
+      if (node_ptr == NULL)
+      {
+        return;
+      }
 
-    node_ptr = pool_ptr->unused.next;
+      list_add_tail(node_ptr, &pool_ptr->unused);
+      pool_ptr->unused_count++;
+    }
 
-    list_del(node_ptr);
-    pool_ptr->unused_count--;
+    while (pool_ptr->unused_count > pool_ptr->max_preallocated)
+    {
+      assert(!list_empty(&pool_ptr->unused));
 
-    free(node_ptr);
+      node_ptr = pool_ptr->unused.next;
+
+      list_del(node_ptr);
+      pool_ptr->unused_count--;
+
+      free(node_ptr);
+    }
   }
 }
 
 /* find entry in unused list, fail if it is empty */
 void *
-lv2dynparam_memory_pool_allocate(
-  lv2dynparam_memory_pool_handle pool_handle)
+rtsafe_memory_pool_allocate(
+  rtsafe_memory_pool_handle pool_handle)
 {
   struct list_head * node_ptr;
 
@@ -155,30 +227,68 @@ lv2dynparam_memory_pool_allocate(
   pool_ptr->unused_count--;
   pool_ptr->used_count++;
 
+  if (pool_ptr->enforce_thread_safety &&
+      pthread_mutex_trylock(&pool_ptr->mutex) == 0)
+  {
+    while (pool_ptr->unused_count < pool_ptr->min_preallocated && !list_empty(&pool_ptr->pending))
+    {
+      node_ptr = pool_ptr->pending.next;
+
+      list_del(node_ptr);
+      list_add_tail(node_ptr, &pool_ptr->unused);
+      pool_ptr->unused_count++;
+    }
+
+    pool_ptr->unused_count2 = pool_ptr->unused_count;
+
+    pthread_mutex_unlock(&pool_ptr->mutex);
+  }
+
   return (node_ptr + 1);
 }
 
 /* move from used to unused list */
 void
-lv2dynparam_memory_pool_deallocate(
-  lv2dynparam_memory_pool_handle pool_handle,
+rtsafe_memory_pool_deallocate(
+  rtsafe_memory_pool_handle pool_handle,
   void * data)
 {
+  struct list_head * node_ptr;
+
   list_add_tail((struct list_head *)data - 1, &pool_ptr->unused);
   pool_ptr->used_count--;
   pool_ptr->unused_count++;
+
+  if (pool_ptr->enforce_thread_safety &&
+      pthread_mutex_trylock(&pool_ptr->mutex) == 0)
+  {
+    while (pool_ptr->unused_count > pool_ptr->max_preallocated)
+    {
+      assert(!list_empty(&pool_ptr->unused));
+
+      node_ptr = pool_ptr->unused.next;
+
+      list_del(node_ptr);
+      list_add_tail(node_ptr, &pool_ptr->pending);
+      pool_ptr->unused_count--;
+    }
+
+    pool_ptr->unused_count2 = pool_ptr->unused_count;
+
+    pthread_mutex_unlock(&pool_ptr->mutex);
+  }
 }
 
 void *
-lv2dynparam_memory_pool_allocate_sleepy(
-  lv2dynparam_memory_pool_handle pool_handle)
+rtsafe_memory_pool_allocate_sleepy(
+  rtsafe_memory_pool_handle pool_handle)
 {
   void * data;
 
   do
   {
-    lv2dynparam_memory_pool_sleepy(pool_handle);
-    data = lv2dynparam_memory_pool_allocate(pool_handle);
+    rtsafe_memory_pool_sleepy(pool_handle);
+    data = rtsafe_memory_pool_allocate(pool_handle);
   }
   while (data == NULL);
 
@@ -189,32 +299,33 @@ lv2dynparam_memory_pool_allocate_sleepy(
 #define DATA_MIN       1024
 #define DATA_SUB       100      /* alloc slightly smaller chunks in hope to not allocating additional page for control data */
 
-struct lv2dynparam_memory_pool_generic
+struct rtsafe_memory_pool_generic
 {
   size_t size;
-  lv2dynparam_memory_pool_handle pool;
+  rtsafe_memory_pool_handle pool;
 };
 
-struct lv2dynparam_memory
+struct rtsafe_memory
 {
-  struct lv2dynparam_memory_pool_generic * pools;
+  struct rtsafe_memory_pool_generic * pools;
   size_t pools_count;
 };
 
-BOOL
-lv2dynparam_memory_init(
+bool
+rtsafe_memory_init(
   size_t max_size,
   size_t prealloc_min,
   size_t prealloc_max,
-  lv2dynparam_memory_handle * handle_ptr)
+  bool enforce_thread_safety,
+  rtsafe_memory_handle * handle_ptr)
 {
   size_t i;
   size_t size;
-  struct lv2dynparam_memory * memory_ptr;
+  struct rtsafe_memory * memory_ptr;
 
-  LOG_DEBUG("lv2dynparam_memory_init() called.");
+  LOG_DEBUG("rtsafe_memory_init() called.");
 
-  memory_ptr = malloc(sizeof(struct lv2dynparam_memory));
+  memory_ptr = malloc(sizeof(struct rtsafe_memory));
   if (memory_ptr == NULL)
   {
     goto fail;
@@ -234,7 +345,7 @@ lv2dynparam_memory_init(
     }
   }
 
-  memory_ptr->pools = malloc(memory_ptr->pools_count * sizeof(struct lv2dynparam_memory_pool_generic));
+  memory_ptr->pools = malloc(memory_ptr->pools_count * sizeof(struct rtsafe_memory_pool_generic));
   if (memory_ptr->pools == NULL)
   {
     goto fail_free;
@@ -246,16 +357,17 @@ lv2dynparam_memory_init(
   {
     memory_ptr->pools[i].size = size - DATA_SUB;
 
-    if (!lv2dynparam_memory_pool_create(
+    if (!rtsafe_memory_pool_create(
           memory_ptr->pools[i].size,
           prealloc_min,
           prealloc_max,
+          enforce_thread_safety,
           &memory_ptr->pools[i].pool))
     {
       while (i > 0)
       {
         i--;
-        lv2dynparam_memory_pool_destroy(memory_ptr->pools[i].pool);
+        rtsafe_memory_pool_destroy(memory_ptr->pools[i].pool);
       }
 
       goto fail_free_pools;
@@ -264,9 +376,9 @@ lv2dynparam_memory_init(
     size = size << 1; 
   }
 
-  *handle_ptr = (lv2dynparam_memory_handle)memory_ptr;
+  *handle_ptr = (rtsafe_memory_handle)memory_ptr;
 
-  return TRUE;
+  return true;
 
 fail_free_pools:
   free(memory_ptr->pools);
@@ -275,21 +387,22 @@ fail_free:
   free(memory_ptr);
 
 fail:
-  return FALSE;
+  return false;
 }
 
-#define memory_ptr ((struct lv2dynparam_memory *)handle_ptr)
+#define memory_ptr ((struct rtsafe_memory *)handle_ptr)
 void
-lv2dynparam_memory_uninit(
-  lv2dynparam_memory_handle handle_ptr)
+rtsafe_memory_uninit(
+  rtsafe_memory_handle handle_ptr)
 {
   unsigned int i;
 
-  LOG_DEBUG("lv2dynparam_memory_uninit() called.");
+  LOG_DEBUG("rtsafe_memory_uninit() called.");
 
   for (i = 0 ; i < memory_ptr->pools_count ; i++)
   {
-    lv2dynparam_memory_pool_destroy(memory_ptr->pools[i].pool);
+    LOG_DEBUG("Destroying pool for size %u", (unsigned int)memory_ptr->pools[i].size);
+    rtsafe_memory_pool_destroy(memory_ptr->pools[i].pool);
   }
 
   free(memory_ptr->pools);
@@ -298,46 +411,60 @@ lv2dynparam_memory_uninit(
 }
 
 void *
-lv2dynparam_memory_allocate(
-  lv2dynparam_memory_handle handle_ptr,
+rtsafe_memory_allocate(
+  rtsafe_memory_handle handle_ptr,
   size_t size)
 {
-  lv2dynparam_memory_pool_handle * data_ptr;
+  rtsafe_memory_pool_handle * data_ptr;
   size_t i;
 
-  LOG_DEBUG("lv2dynparam_memory_allocate() called.");
+  LOG_DEBUG("rtsafe_memory_allocate() called.");
 
   /* pool handle is stored just before user data to ease deallocation */
-  size += sizeof(lv2dynparam_memory_pool_handle);
+  size += sizeof(rtsafe_memory_pool_handle);
 
   for (i = 0 ; i < memory_ptr->pools_count ; i++)
   {
     if (size <= memory_ptr->pools[i].size)
     {
       LOG_DEBUG("Using chunk with size %u.", (unsigned int)memory_ptr->pools[i].size);
-      data_ptr = lv2dynparam_memory_pool_allocate(memory_ptr->pools[i].pool);
+      data_ptr = rtsafe_memory_pool_allocate(memory_ptr->pools[i].pool);
       if (data_ptr == NULL)
       {
-        LOG_DEBUG("lv2dynparam_memory_pool_allocate() failed.");
-        return FALSE;
+        LOG_DEBUG("rtsafe_memory_pool_allocate() failed.");
+        return NULL;
       }
 
       *data_ptr = memory_ptr->pools[i].pool;
 
+      LOG_DEBUG("rtsafe_memory_allocate() returning %p", (data_ptr + 1));
       return (data_ptr + 1);
     }
   }
 
   /* data size too big, increase POOLS_COUNT */
   LOG_WARNING("Data size is too big");
-  return FALSE;
+  return NULL;
 }
 
 void
-lv2dynparam_memory_deallocate(
+rtsafe_memory_sleepy(
+  rtsafe_memory_handle handle_ptr)
+{
+  unsigned int i;
+
+  for (i = 0 ; i < memory_ptr->pools_count ; i++)
+  {
+    rtsafe_memory_pool_sleepy(memory_ptr->pools[i].pool);
+  }
+}
+
+void
+rtsafe_memory_deallocate(
   void * data)
 {
-  lv2dynparam_memory_pool_deallocate(
-    *((lv2dynparam_memory_pool_handle *)data -1),
-    (lv2dynparam_memory_pool_handle *)data - 1);
+  LOG_DEBUG("rtsafe_memory_deallocate(%p) called.", data);
+  rtsafe_memory_pool_deallocate(
+    *((rtsafe_memory_pool_handle *)data -1),
+    (rtsafe_memory_pool_handle *)data - 1);
 }

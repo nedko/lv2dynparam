@@ -27,21 +27,21 @@ void
 lv2dynparam_hints_init_empty(
   struct lv2dynparam_hints * hints_ptr);
 
-BOOL
+bool
 lv2dynparam_hints_init_va_link(
-  lv2dynparam_memory_handle memory,
+  rtsafe_memory_handle memory,
   struct lv2dynparam_hints * hints_ptr,
   ...);
 
-BOOL
+bool
 lv2dynparam_hints_init_va_dup(
-  lv2dynparam_memory_handle memory,
+  rtsafe_memory_handle memory,
   struct lv2dynparam_hints * hints_ptr,
   ...);
 
-BOOL
+bool
 lv2dynparam_hints_init_copy(
-  lv2dynparam_memory_handle memory,
+  rtsafe_memory_handle memory,
   const struct lv2dynparam_hints * src_hints_ptr,
   struct lv2dynparam_hints * dest_hints_ptr);
 

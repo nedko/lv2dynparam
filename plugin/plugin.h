@@ -28,8 +28,6 @@
 #ifndef DYNPARAM_H__84DA2DA3_61BD_45AC_B202_6A08F27D56F5__INCLUDED
 #define DYNPARAM_H__84DA2DA3_61BD_45AC_B202_6A08F27D56F5__INCLUDED
 
-#include "types.h"
-
 /**
  * Call this function to obtain pointer to data for LV2 dynparam extension.
  * This pointer must be returned by LV2 extension_data() called for LV2DYNPARAM_URI
@@ -57,10 +55,10 @@ typedef void * lv2dynparam_plugin_group;
  * @param instance_ptr Pointer to variable receiving handle to plugin helper library instance.
  *
  * @return Success status
- * @retval TRUE - success
- * @retval FALSE - error
+ * @retval true - success
+ * @retval false - error
  */
-BOOL
+bool
 lv2dynparam_plugin_instantiate(
   LV2_Handle instance,
   const char * root_group_name,
@@ -84,13 +82,13 @@ lv2dynparam_plugin_cleanup(
  * @param value new value of changed parameter
  *
  * @return Success status
- * @retval TRUE - success
- * @retval FALSE - error, try later
+ * @retval true - success
+ * @retval false - error, try later
  */
-typedef BOOL
+typedef bool
 (*lv2dynparam_plugin_param_boolean_changed)(
   void * context,
-  BOOL value);
+  bool value);
 
 /**
  * Type for callback function to be called by helper library when float parameter value is changed by host.
@@ -100,10 +98,10 @@ typedef BOOL
  * @param value new value of changed parameter
  *
  * @return Success status
- * @retval TRUE - success
- * @retval FALSE - error, try later
+ * @retval true - success
+ * @retval false - error, try later
  */
-typedef BOOL
+typedef bool
 (*lv2dynparam_plugin_param_float_changed)(
   void * context,
   float value);
@@ -116,10 +114,10 @@ typedef BOOL
  * @param value new value of changed parameter
  *
  * @return Success status
- * @retval TRUE - success
- * @retval FALSE - error, try later
+ * @retval true - success
+ * @retval false - error, try later
  */
-typedef BOOL
+typedef bool
 (*lv2dynparam_plugin_param_enum_changed)(
   void * context,
   const char * value,
@@ -133,10 +131,10 @@ typedef BOOL
  * @param value new value of changed parameter
  *
  * @return Success status
- * @retval TRUE - success
- * @retval FALSE - error, try later
+ * @retval true - success
+ * @retval false - error, try later
  */
-typedef BOOL
+typedef bool
 (*lv2dynparam_plugin_param_int_changed)(
   void * context,
   int value);
@@ -153,10 +151,10 @@ typedef BOOL
  * @param group_ptr Pointer to variable receiving handle to plugin helper library representation of group
  *
  * @return Success status
- * @retval TRUE - success
- * @retval FALSE - error, try later
+ * @retval true - success
+ * @retval false - error, try later
  */
-BOOL
+bool
 lv2dynparam_plugin_group_add(
   lv2dynparam_plugin_instance instance,
   lv2dynparam_plugin_group parent_group,
@@ -179,10 +177,10 @@ lv2dynparam_plugin_group_add(
  * @param param_ptr Pointer to variable receiving handle to plugin helper library representation of parameter
  *
  * @return Success status
- * @retval TRUE - success
- * @retval FALSE - error, try later
+ * @retval true - success
+ * @retval false - error, try later
  */
-BOOL
+bool
 lv2dynparam_plugin_param_boolean_add(
   lv2dynparam_plugin_instance instance,
   lv2dynparam_plugin_group group,
@@ -210,10 +208,10 @@ lv2dynparam_plugin_param_boolean_add(
  * @param param_ptr Pointer to variable receiving handle to plugin helper library representation of parameter
  *
  * @return Success status
- * @retval TRUE - success
- * @retval FALSE - error, try later
+ * @retval true - success
+ * @retval false - error, try later
  */
-BOOL
+bool
 lv2dynparam_plugin_param_float_add(
   lv2dynparam_plugin_instance instance,
   lv2dynparam_plugin_group group,
@@ -243,10 +241,10 @@ lv2dynparam_plugin_param_float_add(
  * @param param_ptr Pointer to variable receiving handle to plugin helper library representation of parameter
  *
  * @return Success status
- * @retval TRUE - success
- * @retval FALSE - error, try later
+ * @retval true - success
+ * @retval false - error, try later
  */
-BOOL
+bool
 lv2dynparam_plugin_param_enum_add(
   lv2dynparam_plugin_instance instance,
   lv2dynparam_plugin_group group,
@@ -276,10 +274,10 @@ lv2dynparam_plugin_param_enum_add(
  * @param param_ptr Pointer to variable receiving handle to plugin helper library representation of parameter
  *
  * @return Success status
- * @retval TRUE - success
- * @retval FALSE - error, try later
+ * @retval true - success
+ * @retval false - error, try later
  */
-BOOL
+bool
 lv2dynparam_plugin_param_int_add(
   lv2dynparam_plugin_instance instance,
   lv2dynparam_plugin_group group,
@@ -299,10 +297,10 @@ lv2dynparam_plugin_param_int_add(
  * @param param handle to plugin helper library representation of parameter to remove
  *
  * @return Success status
- * @retval TRUE - success
- * @retval FALSE - error, try later
+ * @retval true - success
+ * @retval false - error, try later
  */
-BOOL
+bool
 lv2dynparam_plugin_param_remove(
   lv2dynparam_plugin_instance instance,
   lv2dynparam_plugin_parameter param);
@@ -315,13 +313,13 @@ lv2dynparam_plugin_param_remove(
  * @param value new value
  *
  * @return Success status
- * @retval TRUE - success
- * @retval FALSE - error, try later
+ * @retval true - success
+ * @retval false - error, try later
  */
-BOOL
+bool
 lv2dynparam_plugin_param_boolean_change(
   lv2dynparam_plugin_instance instance,
   lv2dynparam_plugin_parameter param,
-  BOOL value);
+  bool value);
 
 #endif /* #ifndef DYNPARAM_H__84DA2DA3_61BD_45AC_B202_6A08F27D56F5__INCLUDED */

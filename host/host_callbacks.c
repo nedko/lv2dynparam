@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "../lv2.h"
 #include "../lv2dynparam.h"
@@ -63,7 +64,7 @@ lv2dynparam_host_group_appear(
     goto fail;
   }
 
-  group_ptr = lv2dynparam_memory_pool_allocate(instance_ptr->groups_pool);
+  group_ptr = rtsafe_memory_pool_allocate(instance_ptr->groups_pool);
   if (group_ptr == NULL)
   {
     goto fail;
@@ -107,14 +108,14 @@ lv2dynparam_host_group_appear(
 
   *group_host_context = group_ptr;
 
-  return TRUE;
+  return true;
 
 fail_deallocate:
-  lv2dynparam_memory_pool_deallocate(instance_ptr->groups_pool, group_ptr);
+  rtsafe_memory_pool_deallocate(instance_ptr->groups_pool, group_ptr);
 
 fail:
   /* we are not lucky enough, plugin will retry later */
-  return FALSE;
+  return false;
 }
 
 unsigned char
@@ -131,7 +132,7 @@ lv2dynparam_host_group_disappear(
   group_ptr->pending_state = LV2DYNPARAM_PENDING_DISAPPEAR;
   lv2dynparam_host_group_pending_children_count_increment(group_ptr->parent_group_ptr);
 
-  return TRUE;
+  return true;
 }
 
 unsigned char
@@ -148,7 +149,7 @@ lv2dynparam_host_parameter_appear(
 
   group_ptr = (struct lv2dynparam_host_group *)group_host_context;
 
-  param_ptr = lv2dynparam_memory_pool_allocate(instance_ptr->parameters_pool);
+  param_ptr = rtsafe_memory_pool_allocate(instance_ptr->parameters_pool);
   if (param_ptr == NULL)
   {
     goto fail;
@@ -166,11 +167,11 @@ lv2dynparam_host_parameter_appear(
   {
     LOG_WARNING("Ignoring parameter of unknown type \"%s\"", param_ptr->type_uri);
 
-    lv2dynparam_memory_pool_deallocate(instance_ptr->parameters_pool, param_ptr);
+    rtsafe_memory_pool_deallocate(instance_ptr->parameters_pool, param_ptr);
 
     *parameter_host_context = NULL;
 
-    return TRUE;
+    return true;
   }
 
   if (!lv2dynparam_hints_init_copy(
@@ -278,16 +279,16 @@ lv2dynparam_host_parameter_appear(
 
   *parameter_host_context = param_ptr;
 
-  return TRUE;
+  return true;
 
 fail_clear_hints:
   lv2dynparam_hints_clear(&param_ptr->hints);
 
 fail_deallocate:
-  lv2dynparam_memory_pool_deallocate(instance_ptr->parameters_pool, param_ptr);
+  rtsafe_memory_pool_deallocate(instance_ptr->parameters_pool, param_ptr);
 
 fail:
-  return FALSE;
+  return false;
 }
 
 #define param_ptr ((struct lv2dynparam_host_parameter *)parameter_host_context)
@@ -307,7 +308,7 @@ lv2dynparam_host_parameter_disappear(
   param_ptr->pending_state = LV2DYNPARAM_PENDING_DISAPPEAR;
   lv2dynparam_host_group_pending_children_count_increment(param_ptr->group_ptr);
 
-  return TRUE;
+  return true;
 }
 
 unsigned char
@@ -315,7 +316,7 @@ lv2dynparam_host_parameter_change(
   void * instance_host_context,
   void * parameter_host_context)
 {
-  return TRUE;
+  return true;
 }
 
 unsigned char
@@ -327,7 +328,7 @@ lv2dynparam_host_command_appear(
   void ** command_context)
 {
   LOG_DEBUG("Command apperead.");
-  return FALSE;                 /* not implemented */
+  return false;                 /* not implemented */
 }
 
 unsigned char
@@ -335,5 +336,5 @@ lv2dynparam_host_command_disappear(
   void * instance_host_context,
   void * command_host_context)
 {
-  return TRUE;
+  return true;
 }

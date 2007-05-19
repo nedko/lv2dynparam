@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <stdbool.h>
 
 #include "../lv2.h"
 #include "../lv2dynparam.h"
@@ -54,7 +55,7 @@ lv2dynparam_host_parameter_free(
   }
 
   lv2dynparam_hints_clear(&parameter_ptr->hints);
-  lv2dynparam_memory_pool_deallocate(instance_ptr->parameters_pool, parameter_ptr);
+  rtsafe_memory_pool_deallocate(instance_ptr->parameters_pool, parameter_ptr);
 }
 
 void
@@ -63,38 +64,38 @@ lv2dynparam_host_group_free(
   struct lv2dynparam_host_group * group_ptr)
 {
   lv2dynparam_hints_clear(&group_ptr->hints);
-  lv2dynparam_memory_pool_deallocate(instance_ptr->groups_pool, group_ptr);
+  rtsafe_memory_pool_deallocate(instance_ptr->groups_pool, group_ptr);
 }
 
-BOOL
+bool
 lv2dynparam_host_map_type_uri(
   struct lv2dynparam_host_parameter * parameter_ptr)
 {
   if (strcmp(parameter_ptr->type_uri, LV2DYNPARAM_PARAMETER_TYPE_BOOLEAN_URI) == 0)
   {
     parameter_ptr->type = LV2DYNPARAM_PARAMETER_TYPE_BOOLEAN;
-    return TRUE;
+    return true;
   }
 
   if (strcmp(parameter_ptr->type_uri, LV2DYNPARAM_PARAMETER_TYPE_FLOAT_URI) == 0)
   {
     parameter_ptr->type = LV2DYNPARAM_PARAMETER_TYPE_FLOAT;
-    return TRUE;
+    return true;
   }
 
   if (strcmp(parameter_ptr->type_uri, LV2DYNPARAM_PARAMETER_TYPE_ENUM_URI) == 0)
   {
     parameter_ptr->type = LV2DYNPARAM_PARAMETER_TYPE_ENUM;
-    return TRUE;
+    return true;
   }
 
   if (strcmp(parameter_ptr->type_uri, LV2DYNPARAM_PARAMETER_TYPE_INT_URI) == 0)
   {
     parameter_ptr->type = LV2DYNPARAM_PARAMETER_TYPE_INT;
-    return TRUE;
+    return true;
   }
 
-  return FALSE;
+  return false;
 }
 
 static struct lv2dynparam_host_callbacks g_lv2dynparam_host_callbacks =
@@ -110,7 +111,7 @@ static struct lv2dynparam_host_callbacks g_lv2dynparam_host_callbacks =
   .command_disappear = lv2dynparam_host_command_disappear
 };
 
-BOOL
+bool
 lv2dynparam_host_attach(
   const LV2_Descriptor * lv2descriptor,
   LV2_Handle lv2instance,
@@ -134,37 +135,41 @@ lv2dynparam_host_attach(
     goto fail_free;
   }
 
-  if (!lv2dynparam_memory_pool_create(
+  if (!rtsafe_memory_pool_create(
         sizeof(struct lv2dynparam_host_group),
         100,
         1000,
+        false,
         &instance_ptr->groups_pool))
   {
     goto fail_destroy_lock;
   }
 
-  if (!lv2dynparam_memory_pool_create(
+  if (!rtsafe_memory_pool_create(
         sizeof(struct lv2dynparam_host_parameter),
         100,
         1000,
+        false,
         &instance_ptr->parameters_pool))
   {
     goto fail_destroy_groups_pool;
   }
 
-  if (!lv2dynparam_memory_pool_create(
+  if (!rtsafe_memory_pool_create(
         sizeof(struct lv2dynparam_host_message),
         100,
         1000,
+        false,
         &instance_ptr->messages_pool))
   {
     goto fail_destroy_parameters_pool;
   }
 
-  if (!lv2dynparam_memory_init(
+  if (!rtsafe_memory_init(
         64 * 1024,
         100,
         1000,
+        false,
         &instance_ptr->memory))
   {
     goto fail_destroy_messages_pool;
@@ -181,7 +186,7 @@ lv2dynparam_host_attach(
   INIT_LIST_HEAD(&instance_ptr->ui_to_realtime_queue);
   instance_ptr->lv2instance = lv2instance;
   instance_ptr->root_group_ptr = NULL;
-  instance_ptr->ui = FALSE;
+  instance_ptr->ui = false;
 
   if (!instance_ptr->callbacks_ptr->host_attach(
         lv2instance,
@@ -197,16 +202,16 @@ lv2dynparam_host_attach(
   return 1;
 
 fail_uninit_memory:
-  lv2dynparam_memory_uninit(instance_ptr->memory);
+  rtsafe_memory_uninit(instance_ptr->memory);
 
 fail_destroy_messages_pool:
-  lv2dynparam_memory_pool_destroy(instance_ptr->messages_pool);
+  rtsafe_memory_pool_destroy(instance_ptr->messages_pool);
 
 fail_destroy_parameters_pool:
-  lv2dynparam_memory_pool_destroy(instance_ptr->parameters_pool);
+  rtsafe_memory_pool_destroy(instance_ptr->parameters_pool);
 
 fail_destroy_groups_pool:
-  lv2dynparam_memory_pool_destroy(instance_ptr->groups_pool);
+  rtsafe_memory_pool_destroy(instance_ptr->groups_pool);
 
 fail_destroy_lock:
   audiolock_destroy(instance_ptr->lock);
@@ -602,7 +607,7 @@ lv2dynparam_host_realtime_run(
      }
 
     list_del(node_ptr);
-    lv2dynparam_memory_pool_deallocate(instance_ptr->messages_pool, message_ptr);
+    rtsafe_memory_pool_deallocate(instance_ptr->messages_pool, message_ptr);
   }
 
 exit:
@@ -652,7 +657,7 @@ lv2dynparam_host_ui_on(
     LOG_DEBUG("UI on - notifying for new things.");
     //LOG_DEBUG("pending_childern_count is %u", instance_ptr->root_group_ptr->pending_childern_count);
 
-    instance_ptr->ui = TRUE;
+    instance_ptr->ui = true;
 
     /* UI knows nothing about root group - notify it */
     //LOG_DEBUG("pending_childern_count is %u", instance_ptr->root_group_ptr->pending_childern_count);
@@ -682,7 +687,7 @@ lv2dynparam_host_ui_off(
   LOG_DEBUG("UI off - removing known things.");
   //LOG_DEBUG("pending_childern_count is %u", instance_ptr->root_group_ptr->pending_childern_count);
 
-  instance_ptr->ui = FALSE;
+  instance_ptr->ui = false;
 
   assert(instance_ptr->root_group_ptr != NULL); /* root group appears on host_attach */
 
@@ -711,7 +716,7 @@ void
 dynparam_parameter_boolean_change(
   lv2dynparam_host_instance instance,
   lv2dynparam_host_parameter parameter_handle,
-  BOOL value)
+  bool value)
 {
   struct lv2dynparam_host_message * message_ptr;
 
@@ -719,7 +724,7 @@ dynparam_parameter_boolean_change(
 
   LOG_DEBUG("\"%s\" changed to \"%s\"", parameter_ptr->name, value ? "TRUE" : "FALSE");
 
-  message_ptr = lv2dynparam_memory_pool_allocate_sleepy(instance_ptr->messages_pool);
+  message_ptr = rtsafe_memory_pool_allocate_sleepy(instance_ptr->messages_pool);
 
   parameter_ptr->data.boolean = value;
 
@@ -744,7 +749,7 @@ dynparam_parameter_float_change(
 
   LOG_DEBUG("\"%s\" changed to %f", parameter_ptr->name, value);
 
-  message_ptr = lv2dynparam_memory_pool_allocate_sleepy(instance_ptr->messages_pool);
+  message_ptr = rtsafe_memory_pool_allocate_sleepy(instance_ptr->messages_pool);
 
   parameter_ptr->data.fpoint.value = value;
 
@@ -769,7 +774,7 @@ dynparam_parameter_enum_change(
 
   LOG_DEBUG("\"%s\" changed to \"%s\" (index %u)", parameter_ptr->name, parameter_ptr->data.enumeration.values[selected_index_value], selected_index_value);
 
-  message_ptr = lv2dynparam_memory_pool_allocate_sleepy(instance_ptr->messages_pool);
+  message_ptr = rtsafe_memory_pool_allocate_sleepy(instance_ptr->messages_pool);
 
   parameter_ptr->data.enumeration.selected_value = selected_index_value;
 
@@ -794,7 +799,7 @@ dynparam_parameter_int_change(
 
   LOG_DEBUG("\"%s\" changed to %d", parameter_ptr->name, value);
 
-  message_ptr = lv2dynparam_memory_pool_allocate_sleepy(instance_ptr->messages_pool);
+  message_ptr = rtsafe_memory_pool_allocate_sleepy(instance_ptr->messages_pool);
 
   parameter_ptr->data.integer.value = value;
 

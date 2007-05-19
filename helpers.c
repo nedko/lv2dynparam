@@ -22,8 +22,8 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
-#include "types.h"
 #include "memory_atomic.h"
 #include "helpers.h"
 
@@ -32,7 +32,7 @@
 
 char *
 lv2dynparam_strdup_atomic(
-  lv2dynparam_memory_handle memory,
+  rtsafe_memory_handle memory,
   const char * source)
 {
   size_t size;
@@ -40,7 +40,7 @@ lv2dynparam_strdup_atomic(
 
   size = strlen(source) + 1;
 
-  dest = lv2dynparam_memory_allocate(memory, size);
+  dest = rtsafe_memory_allocate(memory, size);
   if (dest == NULL)
   {
     return NULL;
@@ -53,7 +53,7 @@ lv2dynparam_strdup_atomic(
 
 char **
 lv2dynparam_enum_duplicate(
-  lv2dynparam_memory_handle memory,
+  rtsafe_memory_handle memory,
   const char * const * values_ptr_ptr,
   unsigned int values_count)
 {
@@ -66,7 +66,7 @@ lv2dynparam_enum_duplicate(
     LOG_DEBUG("\"%s\"", values_ptr_ptr[i]);
   }
 
-  values = lv2dynparam_memory_allocate(memory, values_count * sizeof(char *));
+  values = rtsafe_memory_allocate(memory, values_count * sizeof(char *));
   if (values == NULL)
   {
     LOG_DEBUG("Failed to allocate memory for enum array");
@@ -85,10 +85,10 @@ lv2dynparam_enum_duplicate(
       {
         i--;
         LOG_DEBUG("Deallocating memory for enum array entry at index %u", i);
-        lv2dynparam_memory_deallocate(values[i]);
+        rtsafe_memory_deallocate(values[i]);
       }
 
-      lv2dynparam_memory_deallocate(values);
+      rtsafe_memory_deallocate(values);
 
       return NULL;
     }
@@ -105,7 +105,7 @@ lv2dynparam_enum_duplicate(
 
 void
 lv2dynparam_enum_free(
-  lv2dynparam_memory_handle memory,
+  rtsafe_memory_handle memory,
   char ** values,
   unsigned int values_count)
 {
@@ -113,8 +113,8 @@ lv2dynparam_enum_free(
   {
     values_count--;
 
-    lv2dynparam_memory_deallocate(values[values_count]);
+    rtsafe_memory_deallocate(values[values_count]);
   }
 
-  lv2dynparam_memory_deallocate(values);
+  rtsafe_memory_deallocate(values);
 }

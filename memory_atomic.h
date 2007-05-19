@@ -2,7 +2,6 @@
 /*****************************************************************************
  *
  *   Non-sleeping memory allocation
- *   This file is part of lv2dynparam libraries
  *
  *   Copyright (C) 2006,2007 Nedko Arnaudov <nedko@arnaudov.name>
  *
@@ -24,84 +23,74 @@
 #ifndef MEMORY_ATOMIC_H__7B572547_304D_4597_8808_990BE4476CC3__INCLUDED
 #define MEMORY_ATOMIC_H__7B572547_304D_4597_8808_990BE4476CC3__INCLUDED
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-#if 0
-} /* Adjust editor indent */
-#endif
-
-typedef void * lv2dynparam_memory_pool_handle;
+typedef void * rtsafe_memory_pool_handle;
 
 /* will sleep */
-BOOL
-lv2dynparam_memory_pool_create(
+bool
+rtsafe_memory_pool_create(
   size_t data_size,             /* chunk size */
   size_t min_preallocated,      /* min chunks preallocated */
   size_t max_preallocated,      /* max chunks preallocated */
-  lv2dynparam_memory_pool_handle * pool_ptr);
+  bool enforce_thread_safety,   /* true - enforce thread safety (internal mutex),
+                                   false - assume caller code is already thread-safe */
+  rtsafe_memory_pool_handle * pool_ptr);
 
 /* will sleep */
 void
-lv2dynparam_memory_pool_destroy(
-  lv2dynparam_memory_pool_handle pool);
+rtsafe_memory_pool_destroy(
+  rtsafe_memory_pool_handle pool);
 
 /* may sleep */
 void
-lv2dynparam_memory_pool_sleepy(
-  lv2dynparam_memory_pool_handle pool);
+rtsafe_memory_pool_sleepy(
+  rtsafe_memory_pool_handle pool);
 
 /* will not sleep, returns NULL if no memory is available */
 void *
-lv2dynparam_memory_pool_allocate(
-  lv2dynparam_memory_pool_handle pool);
+rtsafe_memory_pool_allocate(
+  rtsafe_memory_pool_handle pool);
 
-/* may sleep, returns NULL if no memory is available */
+/* may sleep, will not fail */
 void *
-lv2dynparam_memory_pool_allocate(
-  lv2dynparam_memory_pool_handle pool);
-
-/* may sleep */
-void *
-lv2dynparam_memory_pool_allocate_sleepy(
-  lv2dynparam_memory_pool_handle pool);
+rtsafe_memory_pool_allocate_sleepy(
+  rtsafe_memory_pool_handle pool);
 
 /* will not sleep */
 void
-lv2dynparam_memory_pool_deallocate(
-  lv2dynparam_memory_pool_handle pool,
+rtsafe_memory_pool_deallocate(
+  rtsafe_memory_pool_handle pool,
   void * data);
 
-typedef void * lv2dynparam_memory_handle;
+typedef void * rtsafe_memory_handle;
 
 /* will sleep */
-BOOL
-lv2dynparam_memory_init(
+bool
+rtsafe_memory_init(
   size_t max_size,
   size_t prealloc_min,
   size_t prealloc_max,
-  lv2dynparam_memory_handle * handle_ptr);
+  bool enforce_thread_safety,   /* true - enforce thread safety (internal mutex),
+                                   false - assume caller code is already thread-safe */
+  rtsafe_memory_handle * handle_ptr);
 
-/* will not sleep */
+/* will not sleep, returns NULL if no memory is available */
 void *
-lv2dynparam_memory_allocate(
-  lv2dynparam_memory_handle handle_ptr,
+rtsafe_memory_allocate(
+  rtsafe_memory_handle handle_ptr,
   size_t size);
+
+/* may sleep */
+void
+rtsafe_memory_sleepy(
+  rtsafe_memory_handle handle_ptr);
 
 /* will not sleep */
 void
-lv2dynparam_memory_deallocate(
+rtsafe_memory_deallocate(
   void * data);
 
 void
-lv2dynparam_memory_uninit(
-  lv2dynparam_memory_handle handle_ptr);
-
-#if 0
-{ /* Adjust editor indent */
-#endif
-#ifdef __cplusplus
-} /* extern "C" */
-#endif
+rtsafe_memory_uninit(
+  rtsafe_memory_handle handle_ptr);
 
 #endif /* #ifndef MEMORY_ATOMIC_H__7B572547_304D_4597_8808_990BE4476CC3__INCLUDED */

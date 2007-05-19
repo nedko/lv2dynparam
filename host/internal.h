@@ -72,7 +72,7 @@ struct lv2dynparam_host_parameter
 
   union
   {
-    BOOL boolean;
+    bool boolean;
     struct
     {
       float value;
@@ -105,7 +105,7 @@ struct lv2dynparam_host_command
   lv2dynparam_command_handle command_handle;
   char name[LV2DYNPARAM_MAX_STRING_SIZE];
 
-  BOOL gui_referenced;
+  bool gui_referenced;
   void * ui_context;
 };
 
@@ -135,19 +135,19 @@ struct lv2dynparam_host_instance
 
   struct lv2dynparam_host_group * root_group_ptr;
 
-  BOOL ui;
+  bool ui;
 
   struct list_head realtime_to_ui_queue; /* protected by the audiolock */
   struct list_head ui_to_realtime_queue; /* protected by the audiolock */
 
-  lv2dynparam_memory_handle memory;
+  rtsafe_memory_handle memory;
 
-  lv2dynparam_memory_pool_handle groups_pool;
-  lv2dynparam_memory_pool_handle parameters_pool;
-  lv2dynparam_memory_pool_handle messages_pool;
+  rtsafe_memory_pool_handle groups_pool;
+  rtsafe_memory_pool_handle parameters_pool;
+  rtsafe_memory_pool_handle messages_pool;
 };
 
-BOOL
+bool
 lv2dynparam_host_map_type_uri(
   struct lv2dynparam_host_parameter * parameter_ptr);
 

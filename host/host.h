@@ -28,8 +28,6 @@
 #ifndef DYNPARAM_H__5090F477_0BE7_439F_BF1D_F2EB78822760__INCLUDED
 #define DYNPARAM_H__5090F477_0BE7_439F_BF1D_F2EB78822760__INCLUDED
 
-#include "types.h"
-
 /** handle to host helper library instance */
 typedef void * lv2dynparam_host_instance;
 
@@ -54,10 +52,10 @@ typedef void * lv2dynparam_host_command;
  * host helper library instance.
  *
  * @return Success status
- * @retval TRUE - success
- * @retval FALSE - error
+ * @retval true - success
+ * @retval false - error
  */
-BOOL
+bool
 lv2dynparam_host_attach(
   const LV2_Descriptor * lv2descriptor,
   LV2_Handle lv2instance,
@@ -249,7 +247,7 @@ dynparam_parameter_boolean_appeared(
   void * group_ui_context,
   const char * parameter_name,
   const struct lv2dynparam_hints * hints_ptr,
-  BOOL value,
+  bool value,
   void ** parameter_ui_context);
 
 /**
@@ -401,7 +399,7 @@ void
 dynparam_parameter_boolean_changed(
   void * instance_ui_context,
   void * parameter_ui_context,
-  BOOL value);
+  bool value);
 
 /**
  * Call this function to change boolean parameter value.
@@ -416,7 +414,7 @@ void
 dynparam_parameter_boolean_change(
   lv2dynparam_host_instance instance,
   lv2dynparam_host_parameter parameter_handle,
-  BOOL value);
+  bool value);
 
 /**
  * Call this function to change float parameter value.

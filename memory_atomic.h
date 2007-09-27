@@ -25,9 +25,15 @@
 
 typedef void * rtsafe_memory_pool_handle;
 
+#define RTSAFE_MEMORY_POOL_NAME_MAX 128
+
 /* will sleep */
 bool
 rtsafe_memory_pool_create(
+  const char * pool_name,       /* pool name, for debug purposes,
+                                   max RTSAFE_MEMORY_POOL_NAME_MAX chars,
+                                   including terminating zero char.
+                                   May be NULL */
   size_t data_size,             /* chunk size */
   size_t min_preallocated,      /* min chunks preallocated */
   size_t max_preallocated,      /* max chunks preallocated */

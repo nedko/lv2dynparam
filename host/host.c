@@ -136,6 +136,7 @@ lv2dynparam_host_attach(
   }
 
   if (!rtsafe_memory_pool_create(
+        "host groups",
         sizeof(struct lv2dynparam_host_group),
         100,
         1000,
@@ -146,6 +147,7 @@ lv2dynparam_host_attach(
   }
 
   if (!rtsafe_memory_pool_create(
+        "host parameters",
         sizeof(struct lv2dynparam_host_parameter),
         100,
         1000,
@@ -156,6 +158,7 @@ lv2dynparam_host_attach(
   }
 
   if (!rtsafe_memory_pool_create(
+        "host messages",
         sizeof(struct lv2dynparam_host_message),
         100,
         1000,

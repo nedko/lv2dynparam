@@ -90,6 +90,7 @@ lv2dynparam_plugin_instantiate(
   }
 
   if (!rtsafe_memory_pool_create(
+        "plugin groups",
         sizeof(struct lv2dynparam_plugin_group),
         100,
         1000,
@@ -101,6 +102,7 @@ lv2dynparam_plugin_instantiate(
   }
 
   if (!rtsafe_memory_pool_create(
+        "plugin parameters",
         sizeof(struct lv2dynparam_plugin_parameter),
         100,
         1000,

@@ -50,7 +50,7 @@ lv2dynparam_plugin_parameter_free(
       instance_ptr->memory,
       param_ptr->data.enumeration.values,
       param_ptr->data.enumeration.values_count);
-    return;
+    break;
   }
 
   lv2dynparam_hints_clear(&param_ptr->hints);

@@ -275,6 +275,7 @@ lv2dynparam_plugin_param_notify(
       param_ptr->pending = LV2DYNPARAM_PENDING_NOTHING;
       list_del(&param_ptr->siblings);
       instance_ptr->pending--;
+      lv2dynparam_plugin_parameter_free(instance_ptr, param_ptr);
     }
     return;
   default:

@@ -130,7 +130,7 @@ struct lv2dynparam_host_instance
 {
   void * instance_ui_context;
   audiolock_handle lock;
-  struct lv2dynparam_plugin_callbacks * callbacks_ptr;
+  const struct lv2dynparam_plugin_callbacks * callbacks_ptr;
   LV2_Handle lv2instance;
 
   struct lv2dynparam_host_group * root_group_ptr;

@@ -56,7 +56,7 @@ void lv2dynparam_plugin_initialise()
   INIT_LIST_HEAD(&g_instances);
 }
 
-void *
+const void *
 get_lv2dynparam_plugin_extension_data(void)
 {
   return &g_lv2dynparam_plugin_callbacks;

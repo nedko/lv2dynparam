@@ -34,7 +34,7 @@
  *
  * @return The extension data for LV2 dynparam extension.
  */
-void *
+const void *
 get_lv2dynparam_plugin_extension_data(void);
 
 /** handle to plugin helper library instance */

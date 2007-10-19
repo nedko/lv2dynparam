@@ -170,8 +170,8 @@ lv2dynparam_host_attach(
 
   if (!rtsafe_memory_init(
         64 * 1024,
-        100,
         1000,
+        10000,
         false,
         &instance_ptr->memory))
   {

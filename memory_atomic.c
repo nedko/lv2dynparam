@@ -49,6 +49,8 @@ struct rtsafe_memory_pool
   pthread_mutex_t mutex;
   unsigned int unused_count2;
   struct list_head pending;
+
+  size_t used_size;
 };
 
 #define RTSAFE_GROUPS_PREALLOCATE      1024
@@ -115,6 +117,8 @@ rtsafe_memory_pool_create(
     INIT_LIST_HEAD(&pool_ptr->pending);
     pool_ptr->unused_count2 = 0;
   }
+
+  pool_ptr->used_size = 0;
 
   rtsafe_memory_pool_sleepy((rtsafe_memory_pool_handle)pool_ptr);
   *pool_handle_ptr = pool_ptr;
@@ -201,13 +205,15 @@ rtsafe_memory_pool_sleepy(
       node_ptr = malloc(sizeof(struct list_head) + pool_ptr->data_size);
       if (node_ptr == NULL)
       {
-        LOG_DEBUG("malloc() failed");
+        LOG_DEBUG("malloc() failed (%u)", (unsigned int)pool_ptr->used_size);
         break;
       }
 
       list_add_tail(node_ptr, &pool_ptr->pending);
 
       count++;
+
+      pool_ptr->used_size += pool_ptr->data_size;
     }
 
     while (count > pool_ptr->max_preallocated && !list_empty(&pool_ptr->pending))
@@ -219,6 +225,8 @@ rtsafe_memory_pool_sleepy(
       free(node_ptr);
 
       count--;
+
+      pool_ptr->used_size -= pool_ptr->data_size;
     }
 
     pthread_mutex_unlock(&pool_ptr->mutex);
@@ -230,12 +238,13 @@ rtsafe_memory_pool_sleepy(
       node_ptr = malloc(sizeof(struct list_head) + pool_ptr->data_size);
       if (node_ptr == NULL)
       {
-        LOG_DEBUG("malloc() failed");
+        LOG_DEBUG("malloc() failed (%u)", (unsigned int)pool_ptr->used_size);
         return;
       }
 
       list_add_tail(node_ptr, &pool_ptr->unused);
       pool_ptr->unused_count++;
+      pool_ptr->used_size += pool_ptr->data_size;
     }
 
     while (pool_ptr->unused_count > pool_ptr->max_preallocated)
@@ -248,6 +257,7 @@ rtsafe_memory_pool_sleepy(
       pool_ptr->unused_count--;
 
       free(node_ptr);
+      pool_ptr->used_size -= pool_ptr->data_size;
     }
   }
 }

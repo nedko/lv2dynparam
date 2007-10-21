@@ -69,7 +69,13 @@ rtsafe_memory_pool_create(
 
   assert(pool_name == NULL || strlen(pool_name) < RTSAFE_MEMORY_POOL_NAME_MAX); 
 
-  LOG_DEBUG("creating pool \"%s\"", pool_name);
+  LOG_DEBUG(
+    "creating pool \"%s\" (size %u, min = %u, max = %u, enforce = %s)",
+    pool_name,
+    (unsigned int)data_size,
+    (unsigned int)min_preallocated,
+    (unsigned int)max_preallocated,
+    enforce_thread_safety ? "true" : "false");
 
   pool_ptr = malloc(sizeof(struct rtsafe_memory_pool));
   if (pool_ptr == NULL)
@@ -195,6 +201,7 @@ rtsafe_memory_pool_sleepy(
       node_ptr = malloc(sizeof(struct list_head) + pool_ptr->data_size);
       if (node_ptr == NULL)
       {
+        LOG_DEBUG("malloc() failed");
         break;
       }
 
@@ -223,6 +230,7 @@ rtsafe_memory_pool_sleepy(
       node_ptr = malloc(sizeof(struct list_head) + pool_ptr->data_size);
       if (node_ptr == NULL)
       {
+        LOG_DEBUG("malloc() failed");
         return;
       }
 

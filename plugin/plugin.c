@@ -79,7 +79,7 @@ lv2dynparam_plugin_instantiate(
   }
 
   if (!rtsafe_memory_init(
-        64 * 1024,
+        4 * 1024,
         1000,
         10000,
         false,

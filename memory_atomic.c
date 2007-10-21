@@ -251,7 +251,7 @@ rtsafe_memory_pool_allocate(
 {
   struct list_head * node_ptr;
 
-  LOG_DEBUG("pool \"%s\", allocate (%u)", pool_ptr->name, pool_ptr->used_count);
+  LOG_DEBUG("pool \"%s\", allocate (%u, %u)", pool_ptr->name, pool_ptr->used_count, pool_ptr->unused_count);
 
   if (list_empty(&pool_ptr->unused))
   {

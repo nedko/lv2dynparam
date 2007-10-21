@@ -106,12 +106,14 @@ lv2dynparam_plugin_group_new(
   if (group_ptr == NULL)
   {
     ret = false;
+    LOG_DEBUG("rtsafe_memory_pool_allocate() failed");
     goto exit;
   }
 
   if (!lv2dynparam_plugin_group_init(instance_ptr, group_ptr, parent_group_ptr, hints_ptr, name))
   {
     ret = false;
+    LOG_DEBUG("lv2dynparam_plugin_group_init() failed");
     goto free;
   }
 

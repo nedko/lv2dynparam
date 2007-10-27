@@ -80,8 +80,8 @@ lv2dynparam_plugin_instantiate(
 
   if (!rtsafe_memory_init(
         4 * 1024,
-        1000,
-        10000,
+        20,
+        100,
         false,
         &instance_ptr->memory))
   {
@@ -92,8 +92,8 @@ lv2dynparam_plugin_instantiate(
   if (!rtsafe_memory_pool_create(
         "plugin groups",
         sizeof(struct lv2dynparam_plugin_group),
+        10,
         100,
-        1000,
         false,
         &instance_ptr->groups_pool))
   {
@@ -104,8 +104,8 @@ lv2dynparam_plugin_instantiate(
   if (!rtsafe_memory_pool_create(
         "plugin parameters",
         sizeof(struct lv2dynparam_plugin_parameter),
+        10,
         100,
-        1000,
         false,
         &instance_ptr->parameters_pool))
   {
@@ -179,6 +179,11 @@ instance_found:
   {
     lv2dynparam_plugin_group_notify(instance_ptr, &instance_ptr->root_group);
   }
+
+  /* switch to atomic memory mode */
+  rtsafe_memory_atomic(instance_ptr->memory);
+  rtsafe_memory_pool_atomic(instance_ptr->groups_pool);
+  rtsafe_memory_pool_atomic(instance_ptr->parameters_pool);
 
   return true;
 }

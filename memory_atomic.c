@@ -35,6 +35,7 @@
 struct rtsafe_memory_pool
 {
   char name[RTSAFE_MEMORY_POOL_NAME_MAX];
+  bool atomic;
   size_t data_size;
   size_t min_preallocated;
   size_t max_preallocated;
@@ -94,6 +95,7 @@ rtsafe_memory_pool_create(
     sprintf(pool_ptr->name, "%p", pool_ptr);
   }
 
+  pool_ptr->atomic = false;
   pool_ptr->data_size = data_size;
   pool_ptr->min_preallocated = min_preallocated;
   pool_ptr->max_preallocated = max_preallocated;
@@ -264,7 +266,7 @@ rtsafe_memory_pool_sleepy(
 
 /* find entry in unused list, fail if it is empty */
 void *
-rtsafe_memory_pool_allocate(
+rtsafe_memory_pool_allocate_atomic(
   rtsafe_memory_pool_handle pool_handle)
 {
   struct list_head * node_ptr;
@@ -349,12 +351,35 @@ rtsafe_memory_pool_allocate_sleepy(
   do
   {
     rtsafe_memory_pool_sleepy(pool_handle);
-    data = rtsafe_memory_pool_allocate(pool_handle);
+    data = rtsafe_memory_pool_allocate_atomic(pool_handle);
   }
   while (data == NULL);
 
   return data;
 }
+
+void
+rtsafe_memory_pool_atomic(
+  rtsafe_memory_pool_handle pool_handle)
+{
+  pool_ptr->atomic = true;
+}
+
+void *
+rtsafe_memory_pool_allocate(
+  rtsafe_memory_pool_handle pool_handle)
+{
+  if (pool_ptr->atomic)
+  {
+    return rtsafe_memory_pool_allocate_atomic(pool_handle);
+  }
+  else
+  {
+    return rtsafe_memory_pool_allocate_sleepy(pool_handle);
+  }
+}
+
+#undef pool_ptr
 
 /* max alloc is DATA_MIN * (2 ^ POOLS_COUNT) - DATA_SUB */
 #define DATA_MIN       1024
@@ -370,6 +395,7 @@ struct rtsafe_memory
 {
   struct rtsafe_memory_pool_generic * pools;
   size_t pools_count;
+  bool atomic;
 };
 
 bool
@@ -438,6 +464,8 @@ rtsafe_memory_init(
     size = size << 1; 
   }
 
+  memory_ptr->atomic = false;
+
   *handle_ptr = (rtsafe_memory_handle)memory_ptr;
 
   return true;
@@ -452,10 +480,10 @@ fail:
   return false;
 }
 
-#define memory_ptr ((struct rtsafe_memory *)handle_ptr)
+#define memory_ptr ((struct rtsafe_memory *)memory_handle)
 void
 rtsafe_memory_uninit(
-  rtsafe_memory_handle handle_ptr)
+  rtsafe_memory_handle memory_handle)
 {
   unsigned int i;
 
@@ -472,10 +500,11 @@ rtsafe_memory_uninit(
   free(memory_ptr);
 }
 
-void *
-rtsafe_memory_allocate(
-  rtsafe_memory_handle handle_ptr,
-  size_t size)
+static void *
+rtsafe_memory_allocate_internal(
+  rtsafe_memory_handle memory_handle,
+  size_t size,
+  bool atomic)
 {
   rtsafe_memory_pool_handle * data_ptr;
   size_t i;
@@ -490,7 +519,7 @@ rtsafe_memory_allocate(
     if (size <= memory_ptr->pools[i].size)
     {
       LOG_DEBUG("Using chunk with size %u.", (unsigned int)memory_ptr->pools[i].size);
-      data_ptr = rtsafe_memory_pool_allocate(memory_ptr->pools[i].pool);
+      data_ptr = (atomic ? rtsafe_memory_pool_allocate_atomic : rtsafe_memory_pool_allocate_sleepy)(memory_ptr->pools[i].pool);
       if (data_ptr == NULL)
       {
         LOG_DEBUG("rtsafe_memory_pool_allocate() failed.");
@@ -509,9 +538,40 @@ rtsafe_memory_allocate(
   return NULL;
 }
 
+void *
+rtsafe_memory_allocate_atomic(
+  rtsafe_memory_handle memory_handle,
+  size_t size)
+{
+  return rtsafe_memory_allocate_internal(memory_handle, size, true);
+}
+
+void *
+rtsafe_memory_allocate_sleepy(
+  rtsafe_memory_handle memory_handle,
+  size_t size)
+{
+  return rtsafe_memory_allocate_internal(memory_handle, size, false);
+}
+
+void *
+rtsafe_memory_allocate(
+  rtsafe_memory_handle memory_handle,
+  size_t size)
+{
+  return rtsafe_memory_allocate_internal(memory_handle, size, memory_ptr->atomic);
+}
+
+void
+rtsafe_memory_atomic(
+  rtsafe_memory_handle memory_handle)
+{
+  memory_ptr->atomic = true;
+}
+
 void
 rtsafe_memory_sleepy(
-  rtsafe_memory_handle handle_ptr)
+  rtsafe_memory_handle memory_handle)
 {
   unsigned int i;
 

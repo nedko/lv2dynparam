@@ -138,8 +138,8 @@ lv2dynparam_host_attach(
   if (!rtsafe_memory_pool_create(
         "host groups",
         sizeof(struct lv2dynparam_host_group),
+        10,
         100,
-        1000,
         false,
         &instance_ptr->groups_pool))
   {
@@ -149,8 +149,8 @@ lv2dynparam_host_attach(
   if (!rtsafe_memory_pool_create(
         "host parameters",
         sizeof(struct lv2dynparam_host_parameter),
+        10,
         100,
-        1000,
         false,
         &instance_ptr->parameters_pool))
   {
@@ -160,8 +160,8 @@ lv2dynparam_host_attach(
   if (!rtsafe_memory_pool_create(
         "host messages",
         sizeof(struct lv2dynparam_host_message),
+        10,
         100,
-        1000,
         false,
         &instance_ptr->messages_pool))
   {
@@ -170,8 +170,8 @@ lv2dynparam_host_attach(
 
   if (!rtsafe_memory_init(
         4 * 1024,
-        1000,
-        10000,
+        10,
+        100,
         false,
         &instance_ptr->memory))
   {
@@ -199,6 +199,12 @@ lv2dynparam_host_attach(
     LOG_ERROR("lv2dynparam host_attach() failed.");
     goto fail_uninit_memory;
   }
+
+  /* switch to atomic memory mode */
+  rtsafe_memory_atomic(instance_ptr->memory);
+  rtsafe_memory_pool_atomic(instance_ptr->groups_pool);
+  rtsafe_memory_pool_atomic(instance_ptr->parameters_pool);
+  rtsafe_memory_pool_atomic(instance_ptr->messages_pool);
 
   *instance_handle_ptr = (lv2dynparam_host_instance)instance_ptr;
 

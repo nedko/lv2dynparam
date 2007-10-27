@@ -53,12 +53,22 @@ rtsafe_memory_pool_sleepy(
 
 /* will not sleep, returns NULL if no memory is available */
 void *
+rtsafe_memory_pool_allocate_atomic(
+  rtsafe_memory_pool_handle pool);
+
+/* may sleep, will not fail under normal conditions */
+void *
+rtsafe_memory_pool_allocate_sleepy(
+  rtsafe_memory_pool_handle pool);
+
+/* may or may not sleep, depending of whether atomic mode is enabled */
+void *
 rtsafe_memory_pool_allocate(
   rtsafe_memory_pool_handle pool);
 
-/* may sleep, will not fail */
-void *
-rtsafe_memory_pool_allocate_sleepy(
+/* switch to atomic mode */
+void
+rtsafe_memory_pool_atomic(
   rtsafe_memory_pool_handle pool);
 
 /* will not sleep */
@@ -81,14 +91,31 @@ rtsafe_memory_init(
 
 /* will not sleep, returns NULL if no memory is available */
 void *
-rtsafe_memory_allocate(
-  rtsafe_memory_handle handle_ptr,
+rtsafe_memory_allocate_atomic(
+  rtsafe_memory_handle memory_handle,
   size_t size);
+
+/* may sleep, will not fail under normal conditions */
+void *
+rtsafe_memory_allocate_sleepy(
+  rtsafe_memory_handle memory_handle,
+  size_t size);
+
+/* may or may not sleep, depending of whether atomic mode is enabled */
+void *
+rtsafe_memory_allocate(
+  rtsafe_memory_handle memory_handle,
+  size_t size);
+
+/* switch to atomic mode */
+void
+rtsafe_memory_atomic(
+  rtsafe_memory_handle memory_handle);
 
 /* may sleep */
 void
 rtsafe_memory_sleepy(
-  rtsafe_memory_handle handle_ptr);
+  rtsafe_memory_handle memory_handle);
 
 /* will not sleep */
 void
@@ -97,6 +124,6 @@ rtsafe_memory_deallocate(
 
 void
 rtsafe_memory_uninit(
-  rtsafe_memory_handle handle_ptr);
+  rtsafe_memory_handle memory_handle);
 
 #endif /* #ifndef MEMORY_ATOMIC_H__7B572547_304D_4597_8808_990BE4476CC3__INCLUDED */

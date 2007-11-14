@@ -110,7 +110,7 @@ struct lv2_rtsafe_memory_pool_provider
   (*deallocate)(
     lv2_rtsafe_memory_pool_handle pool,
     void * memory_ptr);
-}
+};
 
 #if 0
 { /* Adjust editor indent */

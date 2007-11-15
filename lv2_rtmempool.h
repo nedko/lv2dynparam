@@ -21,6 +21,8 @@
 #ifndef LV2_RTMEMPOOL_H__8914012A_720D_4EAC_B0DB_6F93F2B47975__INCLUDED
 #define LV2_RTMEMPOOL_H__8914012A_720D_4EAC_B0DB_6F93F2B47975__INCLUDED
 
+#define LV2_RTSAFE_MEMORY_POOL_URI "http://home.gna.org/lv2dynparam/rtmempool/v1"
+
 #ifdef __cplusplus
 extern "C" {
 #endif

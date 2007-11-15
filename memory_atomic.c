@@ -27,6 +27,7 @@
 #include <stdbool.h>
 #include <pthread.h>
 
+#include "../lv2_rtmempool.h"
 #include "memory_atomic.h"
 #include "list.h"
 //#define LOG_LEVEL LOG_LEVEL_DEBUG
@@ -34,51 +35,23 @@
 
 struct rtsafe_memory_pool
 {
-  char name[RTSAFE_MEMORY_POOL_NAME_MAX];
   bool atomic;
-  size_t data_size;
-  size_t min_preallocated;
-  size_t max_preallocated;
-
-  unsigned int used_count;
-  struct list_head unused;
-  struct list_head used;
-  unsigned int unused_count;
-
-  bool enforce_thread_safety;
-  /* next members are initialized/used only if enforce_thread_safety is true */
-  pthread_mutex_t mutex;
-  unsigned int unused_count2;
-  struct list_head pending;
-
-  size_t used_size;
+  lv2_rtsafe_memory_pool_handle lv2mempool;
+  struct lv2_rtsafe_memory_pool_provider * provider_ptr;
 };
 
 #define RTSAFE_GROUPS_PREALLOCATE      1024
 
 bool
 rtsafe_memory_pool_create(
+  struct lv2_rtsafe_memory_pool_provider * provider_ptr,
   const char * pool_name,
   size_t data_size,
   size_t min_preallocated,
   size_t max_preallocated,
-  bool enforce_thread_safety,
   rtsafe_memory_pool_handle * pool_handle_ptr)
 {
-  int ret;
   struct rtsafe_memory_pool * pool_ptr;
-
-  assert(min_preallocated <= max_preallocated);
-
-  assert(pool_name == NULL || strlen(pool_name) < RTSAFE_MEMORY_POOL_NAME_MAX); 
-
-  LOG_DEBUG(
-    "creating pool \"%s\" (size %u, min = %u, max = %u, enforce = %s)",
-    pool_name,
-    (unsigned int)data_size,
-    (unsigned int)min_preallocated,
-    (unsigned int)max_preallocated,
-    enforce_thread_safety ? "true" : "false");
 
   pool_ptr = malloc(sizeof(struct rtsafe_memory_pool));
   if (pool_ptr == NULL)
@@ -86,43 +59,15 @@ rtsafe_memory_pool_create(
     return false;
   }
 
-  if (pool_name != NULL)
-  {
-    strcpy(pool_ptr->name, pool_name);
-  }
-  else
-  {
-    sprintf(pool_ptr->name, "%p", pool_ptr);
-  }
-
   pool_ptr->atomic = false;
-  pool_ptr->data_size = data_size;
-  pool_ptr->min_preallocated = min_preallocated;
-  pool_ptr->max_preallocated = max_preallocated;
+  pool_ptr->provider_ptr = provider_ptr;
 
-  INIT_LIST_HEAD(&pool_ptr->used);
-  pool_ptr->used_count = 0;
-
-  INIT_LIST_HEAD(&pool_ptr->unused);
-  pool_ptr->unused_count = 0;
-
-  pool_ptr->enforce_thread_safety = enforce_thread_safety;
-  if (enforce_thread_safety)
+  if (!provider_ptr->create(pool_name, data_size, min_preallocated, max_preallocated, &pool_ptr->lv2mempool))
   {
-    ret = pthread_mutex_init(&pool_ptr->mutex, NULL);
-    if (ret != 0)
-    {
-      free(pool_ptr);
-      return false;
-    }
-
-    INIT_LIST_HEAD(&pool_ptr->pending);
-    pool_ptr->unused_count2 = 0;
+    free(pool_ptr);
+    return false;
   }
 
-  pool_ptr->used_size = 0;
-
-  rtsafe_memory_pool_sleepy((rtsafe_memory_pool_handle)pool_ptr);
   *pool_handle_ptr = pool_ptr;
 
   return true;
@@ -134,134 +79,8 @@ void
 rtsafe_memory_pool_destroy(
   rtsafe_memory_pool_handle pool_handle)
 {
-  int ret;
-  struct list_head * node_ptr;
-
-  LOG_DEBUG("destroying pool \"%s\"", pool_ptr->name);
-
-  /* caller should deallocate all chunks prior releasing pool itself */
-  if (pool_ptr->used_count != 0)
-  {
-    LOG_WARNING("Deallocating non-empty pool \"%s\", leaking %u entries:", pool_ptr->name, pool_ptr->used_count);
-
-    list_for_each(node_ptr, &pool_ptr->used)
-    {
-      LOG_WARNING("    %p", node_ptr + 1);
-    }
-
-    assert(0);
-  }
-
-  while (pool_ptr->unused_count != 0)
-  {
-    assert(!list_empty(&pool_ptr->unused));
-
-    node_ptr = pool_ptr->unused.next;
-
-    list_del(node_ptr);
-    pool_ptr->unused_count--;
-
-    free(node_ptr);
-  }
-
-  assert(list_empty(&pool_ptr->unused));
-
-  if (pool_ptr->enforce_thread_safety)
-  {
-    while (!list_empty(&pool_ptr->pending))
-    {
-      node_ptr = pool_ptr->pending.next;
-
-      list_del(node_ptr);
-
-      free(node_ptr);
-    }
-
-    ret = pthread_mutex_destroy(&pool_ptr->mutex);
-    assert(ret == 0);
-  }
-
+  pool_ptr->provider_ptr->destroy(pool_ptr->lv2mempool);
   free(pool_ptr);
-}
-
-/* adjust unused list size */
-void
-rtsafe_memory_pool_sleepy(
-  rtsafe_memory_pool_handle pool_handle)
-{
-  struct list_head * node_ptr;
-  unsigned int count;
-
-  LOG_DEBUG("pool \"%s\", sleepy", pool_ptr->name);
-
-  if (pool_ptr->enforce_thread_safety)
-  {
-    pthread_mutex_lock(&pool_ptr->mutex);
-
-    count = pool_ptr->unused_count2;
-
-    assert(pool_ptr->min_preallocated < pool_ptr->max_preallocated);
-
-    while (count < pool_ptr->min_preallocated)
-    {
-      node_ptr = malloc(sizeof(struct list_head) + pool_ptr->data_size);
-      if (node_ptr == NULL)
-      {
-        LOG_DEBUG("malloc() failed (%u)", (unsigned int)pool_ptr->used_size);
-        break;
-      }
-
-      list_add_tail(node_ptr, &pool_ptr->pending);
-
-      count++;
-
-      pool_ptr->used_size += pool_ptr->data_size;
-    }
-
-    while (count > pool_ptr->max_preallocated && !list_empty(&pool_ptr->pending))
-    {
-      node_ptr = pool_ptr->pending.next;
-
-      list_del(node_ptr);
-
-      free(node_ptr);
-
-      count--;
-
-      pool_ptr->used_size -= pool_ptr->data_size;
-    }
-
-    pthread_mutex_unlock(&pool_ptr->mutex);
-  }
-  else
-  {
-    while (pool_ptr->unused_count < pool_ptr->min_preallocated)
-    {
-      node_ptr = malloc(sizeof(struct list_head) + pool_ptr->data_size);
-      if (node_ptr == NULL)
-      {
-        LOG_DEBUG("malloc() failed (%u)", (unsigned int)pool_ptr->used_size);
-        return;
-      }
-
-      list_add_tail(node_ptr, &pool_ptr->unused);
-      pool_ptr->unused_count++;
-      pool_ptr->used_size += pool_ptr->data_size;
-    }
-
-    while (pool_ptr->unused_count > pool_ptr->max_preallocated)
-    {
-      assert(!list_empty(&pool_ptr->unused));
-
-      node_ptr = pool_ptr->unused.next;
-
-      list_del(node_ptr);
-      pool_ptr->unused_count--;
-
-      free(node_ptr);
-      pool_ptr->used_size -= pool_ptr->data_size;
-    }
-  }
 }
 
 /* find entry in unused list, fail if it is empty */
@@ -269,40 +88,7 @@ void *
 rtsafe_memory_pool_allocate_atomic(
   rtsafe_memory_pool_handle pool_handle)
 {
-  struct list_head * node_ptr;
-
-  LOG_DEBUG("pool \"%s\", allocate (%u, %u)", pool_ptr->name, pool_ptr->used_count, pool_ptr->unused_count);
-
-  if (list_empty(&pool_ptr->unused))
-  {
-    return NULL;
-  }
-
-  node_ptr = pool_ptr->unused.next;
-  list_del(node_ptr);
-  pool_ptr->unused_count--;
-  pool_ptr->used_count++;
-  list_add_tail(node_ptr, &pool_ptr->used);
-
-  if (pool_ptr->enforce_thread_safety &&
-      pthread_mutex_trylock(&pool_ptr->mutex) == 0)
-  {
-    while (pool_ptr->unused_count < pool_ptr->min_preallocated && !list_empty(&pool_ptr->pending))
-    {
-      node_ptr = pool_ptr->pending.next;
-
-      list_del(node_ptr);
-      list_add_tail(node_ptr, &pool_ptr->unused);
-      pool_ptr->unused_count++;
-    }
-
-    pool_ptr->unused_count2 = pool_ptr->unused_count;
-
-    pthread_mutex_unlock(&pool_ptr->mutex);
-  }
-
-  LOG_DEBUG("pool \"%s\", allocated %p (%u)", pool_ptr->name, node_ptr + 1, pool_ptr->used_count);
-  return (node_ptr + 1);
+  return pool_ptr->provider_ptr->allocate_atomic(pool_ptr->lv2mempool);
 }
 
 /* move from used to unused list */
@@ -311,51 +97,14 @@ rtsafe_memory_pool_deallocate(
   rtsafe_memory_pool_handle pool_handle,
   void * data)
 {
-  struct list_head * node_ptr;
-
-  LOG_DEBUG("pool \"%s\", deallocate %p (%u)", pool_ptr->name, (struct list_head *)data - 1, pool_ptr->used_count);
-
-  list_del((struct list_head *)data - 1);
-  list_add_tail((struct list_head *)data - 1, &pool_ptr->unused);
-  pool_ptr->used_count--;
-  pool_ptr->unused_count++;
-
-  if (pool_ptr->enforce_thread_safety &&
-      pthread_mutex_trylock(&pool_ptr->mutex) == 0)
-  {
-    while (pool_ptr->unused_count > pool_ptr->max_preallocated)
-    {
-      assert(!list_empty(&pool_ptr->unused));
-
-      node_ptr = pool_ptr->unused.next;
-
-      list_del(node_ptr);
-      list_add_tail(node_ptr, &pool_ptr->pending);
-      pool_ptr->unused_count--;
-    }
-
-    pool_ptr->unused_count2 = pool_ptr->unused_count;
-
-    pthread_mutex_unlock(&pool_ptr->mutex);
-  }
+  pool_ptr->provider_ptr->deallocate(pool_ptr->lv2mempool, data);
 }
 
 void *
 rtsafe_memory_pool_allocate_sleepy(
   rtsafe_memory_pool_handle pool_handle)
 {
-  void * data;
-
-  LOG_DEBUG("pool \"%s\", allocate sleepy", pool_ptr->name);
-
-  do
-  {
-    rtsafe_memory_pool_sleepy(pool_handle);
-    data = rtsafe_memory_pool_allocate_atomic(pool_handle);
-  }
-  while (data == NULL);
-
-  return data;
+  return pool_ptr->provider_ptr->allocate_sleepy(pool_ptr->lv2mempool);
 }
 
 void
@@ -400,10 +149,10 @@ struct rtsafe_memory
 
 bool
 rtsafe_memory_init(
+  struct lv2_rtsafe_memory_pool_provider * provider_ptr,
   size_t max_size,
   size_t prealloc_min,
   size_t prealloc_max,
-  bool enforce_thread_safety,
   rtsafe_memory_handle * handle_ptr)
 {
   size_t i;
@@ -445,11 +194,11 @@ rtsafe_memory_init(
     memory_ptr->pools[i].size = size - DATA_SUB;
 
     if (!rtsafe_memory_pool_create(
+          provider_ptr,
           "rtsafe generic",
           memory_ptr->pools[i].size,
           prealloc_min,
           prealloc_max,
-          enforce_thread_safety,
           &memory_ptr->pools[i].pool))
     {
       while (i > 0)
@@ -567,18 +316,6 @@ rtsafe_memory_atomic(
   rtsafe_memory_handle memory_handle)
 {
   memory_ptr->atomic = true;
-}
-
-void
-rtsafe_memory_sleepy(
-  rtsafe_memory_handle memory_handle)
-{
-  unsigned int i;
-
-  for (i = 0 ; i < memory_ptr->pools_count ; i++)
-  {
-    rtsafe_memory_pool_sleepy(memory_ptr->pools[i].pool);
-  }
 }
 
 void

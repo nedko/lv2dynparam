@@ -138,43 +138,43 @@ lv2dynparam_host_attach(
   }
 
   if (!rtsafe_memory_pool_create(
+        rtmempool_ptr,
         "host groups",
         sizeof(struct lv2dynparam_host_group),
         10,
         100,
-        false,
         &instance_ptr->groups_pool))
   {
     goto fail_destroy_lock;
   }
 
   if (!rtsafe_memory_pool_create(
+        rtmempool_ptr,
         "host parameters",
         sizeof(struct lv2dynparam_host_parameter),
         10,
         100,
-        false,
         &instance_ptr->parameters_pool))
   {
     goto fail_destroy_groups_pool;
   }
 
   if (!rtsafe_memory_pool_create(
+        rtmempool_ptr,
         "host messages",
         sizeof(struct lv2dynparam_host_message),
         10,
         100,
-        false,
         &instance_ptr->messages_pool))
   {
     goto fail_destroy_parameters_pool;
   }
 
   if (!rtsafe_memory_init(
+        rtmempool_ptr,
         4 * 1024,
         10,
         100,
-        false,
         &instance_ptr->memory))
   {
     goto fail_destroy_messages_pool;

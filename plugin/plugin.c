@@ -27,6 +27,7 @@
 
 #include "../lv2.h"
 #include "../lv2dynparam.h"
+#include "../lv2_rtmempool.h"
 #include "plugin.h"
 #include "../list.h"
 #include "../memory_atomic.h"
@@ -71,6 +72,28 @@ lv2dynparam_plugin_instantiate(
 {
   bool ret;
   struct lv2dynparam_plugin_instance * instance_ptr;
+  struct lv2_rtsafe_memory_pool_provider * rtmempool_ptr;
+
+  rtmempool_ptr = NULL;
+
+  while (*host_features_ptr_ptr)
+  {
+    LOG_DEBUG("Host feature <%s> detected", (*host_features_ptr_ptr)->URI);
+
+    if (strcmp((*host_features_ptr_ptr)->URI, LV2_RTSAFE_MEMORY_POOL_URI) == 0)
+    {
+      rtmempool_ptr = (*host_features_ptr_ptr)->data;
+    }
+
+    host_features_ptr_ptr++;
+  }
+
+  if (rtmempool_ptr == NULL)
+  {
+    LOG_ERROR(LV2_RTSAFE_MEMORY_POOL_URI " extension is required");
+    ret = false;
+    goto exit;
+  }
 
   instance_ptr = malloc(sizeof(struct lv2dynparam_plugin_instance));
   if (instance_ptr == NULL)
@@ -80,10 +103,10 @@ lv2dynparam_plugin_instantiate(
   }
 
   if (!rtsafe_memory_init(
+        rtmempool_ptr,
         4 * 1024,
         20,
         100,
-        false,
         &instance_ptr->memory))
   {
     ret = false;
@@ -91,11 +114,11 @@ lv2dynparam_plugin_instantiate(
   }
 
   if (!rtsafe_memory_pool_create(
+        rtmempool_ptr,
         "plugin groups",
         sizeof(struct lv2dynparam_plugin_group),
         10,
         100,
-        false,
         &instance_ptr->groups_pool))
   {
     ret = false;
@@ -103,11 +126,11 @@ lv2dynparam_plugin_instantiate(
   }
 
   if (!rtsafe_memory_pool_create(
+        rtmempool_ptr,
         "plugin parameters",
         sizeof(struct lv2dynparam_plugin_parameter),
         10,
         100,
-        false,
         &instance_ptr->parameters_pool))
   {
     ret = false;

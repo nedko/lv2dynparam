@@ -51,6 +51,7 @@ typedef void * lv2dynparam_plugin_group;
  * This function should be called from LV2 instatiate() function.
  *
  * @param instance Handle of LV2 plugin instance for which extension is being initialized.
+ * @param host_features_ptr_ptr host features as provided to LV2 instantiate() function
  * @param root_group_name Name of the root group
  * @param instance_ptr Pointer to variable receiving handle to plugin helper library instance.
  *
@@ -61,6 +62,7 @@ typedef void * lv2dynparam_plugin_group;
 bool
 lv2dynparam_plugin_instantiate(
   LV2_Handle instance,
+  const LV2_Feature * const * host_features_ptr_ptr,
   const char * root_group_name,
   lv2dynparam_plugin_instance * instance_ptr);
 

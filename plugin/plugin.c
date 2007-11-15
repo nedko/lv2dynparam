@@ -65,6 +65,7 @@ get_lv2dynparam_plugin_extension_data(void)
 bool
 lv2dynparam_plugin_instantiate(
   LV2_Handle lv2instance,
+  const LV2_Feature * const * host_features_ptr_ptr,
   const char * root_group_name,
   lv2dynparam_plugin_instance * instance_handle_ptr)
 {

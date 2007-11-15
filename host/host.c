@@ -27,6 +27,7 @@
 
 #include "../lv2.h"
 #include "../lv2dynparam.h"
+#include "../lv2_rtmempool.h"
 #include "host.h"
 #include "../audiolock.h"
 #include "../list.h"
@@ -115,6 +116,7 @@ bool
 lv2dynparam_host_attach(
   const LV2_Descriptor * lv2descriptor,
   LV2_Handle lv2instance,
+  struct lv2_rtsafe_memory_pool_provider * rtmempool_ptr,
   void * instance_ui_context,
   lv2dynparam_host_instance * instance_handle_ptr)
 {

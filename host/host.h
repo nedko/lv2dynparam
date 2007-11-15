@@ -47,6 +47,7 @@ typedef void * lv2dynparam_host_command;
  *
  * @param lv2descriptor LV2 descriptor of plugin to attach to.
  * @param lv2instance handle to LV2 plugin instance.
+ * @param rtmempool_ptr pointer to rt-capable memory pool.
  * @param instance_ui_context user context to be associated with instance
  * @param instance_ptr Pointer to variable receiving handle to
  * host helper library instance.
@@ -59,6 +60,7 @@ bool
 lv2dynparam_host_attach(
   const LV2_Descriptor * lv2descriptor,
   LV2_Handle lv2instance,
+  struct lv2_rtsafe_memory_pool_provider * rtmempool_ptr,
   void * instance_ui_context,
   lv2dynparam_host_instance * instance_ptr);
 

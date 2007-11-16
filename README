@@ -1,3 +1,21 @@
-There is no info here yet, you have to ask.
+lv2dynparam is a LV2 plugin interface extension that enables plugin
+parameters to appear and disappear (i.e. number of voices). It also
+allows nested grouping of parameters. Groups can be used for things
+like ADSR abstraction, i.e. group of 4 float parameters.
+
+The extension consists of a header describing the extension interface
+and libraries, one for plugins and one for hosts, to expose
+functionality in more usable, from programmer point of view,
+interface.
+
+The extension has been initially created to allow exposing the full
+functionality of the zynadd LV2 plugin (part of the zyn project) and
+to allow generic UI - provided by a host (zynjacku). The extension
+allows but does not requires generic UI. Plugin writters are free to
+provide custom UI for their plugin.
+
+The extension should be suitable for all plugins that expose many
+and/or complex data types, like samplers, non-trivial synths, etc.
+
 You can reach me at nedko@arnaudov.name
 I can also be found in #lad on FreeNode (as nedko).

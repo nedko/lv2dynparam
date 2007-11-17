@@ -17,5 +17,7 @@ provide custom UI for their plugin.
 The extension should be suitable for all plugins that expose many
 and/or complex data types, like samplers, non-trivial synths, etc.
 
+This library is work in progress. Any help is appreciated.
+
 You can reach me at nedko@arnaudov.name
 I can also be found in #lad on FreeNode (as nedko).

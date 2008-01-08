@@ -2,11 +2,14 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(lv2dynparam, dev)
+AC_INIT(lv2dynparam1, dev)
 AC_CONFIG_AUX_DIR(config)
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([lv2dynparam.h])
 AC_CONFIG_HEADER([config.h])
+
+# not real check but hack (because version is not parameter to configure script) to detect development version
+AM_CONDITIONAL(DEV_VERSION, test $VERSION = dev)
 
 # Checks for programs.
 AC_PROG_CC

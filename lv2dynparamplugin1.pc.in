@@ -1,0 +1,10 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@/lv2dynparam1
+
+Name: lv2dynparamplugin1
+Version: @VERSION@
+Description: Convenience library for plugins to support LV2 dynparam extension (v1)
+Libs: -L${libdir} -llv2dynparamplugin1
+Cflags: -I${includedir}

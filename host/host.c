@@ -24,8 +24,8 @@
 #include <string.h>
 #include <assert.h>
 #include <stdbool.h>
+#include <lv2.h>
 
-#include "../lv2.h"
 #include "../lv2dynparam.h"
 #include "../lv2_rtmempool.h"
 #include "host.h"

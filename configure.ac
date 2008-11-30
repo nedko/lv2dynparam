@@ -2,14 +2,14 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(lv2dynparam1, dev)
+AC_INIT(lv2dynparam1, 2)
 AC_CONFIG_AUX_DIR(config)
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([lv2dynparam.h])
 AC_CONFIG_HEADER([config.h])
 
-# not real check but hack (because version is not parameter to configure script) to detect development version
-AM_CONDITIONAL(DEV_VERSION, test $VERSION = dev)
+if test -d $srcdir/.git ; then dev_version="yes" ; else dev_version="no"; fi
+AM_CONDITIONAL(DEV_VERSION, test "$dev_version" = "yes")
 
 # Checks for programs.
 AC_PROG_CC

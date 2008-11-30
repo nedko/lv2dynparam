@@ -130,8 +130,17 @@ lv2dynparam_host_group_disappear(
 
   LOG_DEBUG("Group %s disappeared.", group_ptr->name);
 
-  group_ptr->pending_state = LV2DYNPARAM_PENDING_DISAPPEAR;
-  lv2dynparam_host_group_pending_children_count_increment(group_ptr->parent_group_ptr);
+  switch (group_ptr->pending_state)
+  {
+  case LV2DYNPARAM_PENDING_APPEAR:
+    group_ptr->pending_state = LV2DYNPARAM_PENDING_NOTHING;
+    lv2dynparam_host_group_pending_children_count_decrement(group_ptr->parent_group_ptr);
+    break;
+  case LV2DYNPARAM_PENDING_NOTHING:
+    group_ptr->pending_state = LV2DYNPARAM_PENDING_DISAPPEAR;
+    lv2dynparam_host_group_pending_children_count_increment(group_ptr->parent_group_ptr);
+    break;
+  }
 
   return true;
 }
@@ -306,8 +315,17 @@ lv2dynparam_host_parameter_disappear(
 
   LOG_DEBUG("Parameter %s disappeared.", param_ptr->name);
 
-  param_ptr->pending_state = LV2DYNPARAM_PENDING_DISAPPEAR;
-  lv2dynparam_host_group_pending_children_count_increment(param_ptr->group_ptr);
+  switch (param_ptr->pending_state)
+  {
+  case LV2DYNPARAM_PENDING_APPEAR:
+    param_ptr->pending_state = LV2DYNPARAM_PENDING_NOTHING;
+    lv2dynparam_host_group_pending_children_count_decrement(param_ptr->group_ptr);
+    break;
+  case LV2DYNPARAM_PENDING_NOTHING:
+    param_ptr->pending_state = LV2DYNPARAM_PENDING_DISAPPEAR;
+    lv2dynparam_host_group_pending_children_count_increment(param_ptr->group_ptr);
+    break;
+  }
 
   return true;
 }

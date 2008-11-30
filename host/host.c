@@ -22,8 +22,10 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 #include <assert.h>
 #include <stdbool.h>
+#include <locale.h>
 #include <lv2.h>
 
 #include "../lv2dynparam.h"
@@ -39,6 +41,11 @@
 
 #define LOG_LEVEL LOG_LEVEL_ERROR
 #include "../log.h"
+
+#define SERIALIZE_SEPARATOR_CHAR          '/'
+#define SERIALIZE_ESCAPE_CHAR             '^'
+#define SERIALIZE_BUFFER_INITIAL_SIZE     1024
+#define SERIALIZE_BUFFER_INCREMENT_SIZE   1024
 
 void
 lv2dynparam_host_parameter_free(
@@ -267,7 +274,7 @@ lv2dynparam_host_notify_group_appeared(
 {
   void * parent_group_ui_context;
 
-  //LOG_DEBUG("lv2dynparam_host_notify_group_appeared() called.");
+  LOG_DEBUG("lv2dynparam_host_notify_group_appeared() called for '%s'.", group_ptr->name);
 
   if (group_ptr->parent_group_ptr)
   {
@@ -295,7 +302,7 @@ lv2dynparam_host_notify_group_disappeared(
 {
   void * parent_group_ui_context;
 
-  //LOG_DEBUG("lv2dynparam_host_notify_group_disappeared() called.");
+  LOG_DEBUG("lv2dynparam_host_notify_group_disappeared() called for '%s'.", group_ptr->name);
 
   if (group_ptr->parent_group_ptr)
   {
@@ -318,7 +325,7 @@ lv2dynparam_host_notify_parameter_appeared(
   struct lv2dynparam_host_instance * instance_ptr,
   struct lv2dynparam_host_parameter * parameter_ptr)
 {
-  LOG_DEBUG("lv2dynparam_host_notify_group_appeared() called for \"%s\".", parameter_ptr->name);
+  LOG_DEBUG("lv2dynparam_host_notify_parameter_appeared() called for \"%s\".", parameter_ptr->name);
 
   switch (parameter_ptr->type)
   {
@@ -379,6 +386,8 @@ lv2dynparam_host_notify_parameter_disappeared(
   struct lv2dynparam_host_instance * instance_ptr,
   struct lv2dynparam_host_parameter * parameter_ptr)
 {
+  LOG_DEBUG("lv2dynparam_host_notify_parameter_disappeared() called for \"%s\".", parameter_ptr->name);
+
   switch (parameter_ptr->type)
   {
   case LV2DYNPARAM_PARAMETER_TYPE_BOOLEAN:
@@ -562,6 +571,300 @@ lv2dynparam_host_group_hide(
   group_ptr->pending_state = LV2DYNPARAM_PENDING_APPEAR;
 }
 
+static
+bool
+prepend_string(
+  char ** buffer_ptr_ptr,
+  size_t * buffer_size_ptr,
+  char ** last_ptr_ptr,
+  const char * string)
+{
+  size_t len;
+  char * new_buffer_ptr;
+  size_t new_buffer_size;
+  char * new_last_ptr;
+
+  len = strlen(string);
+
+  if (len > *last_ptr_ptr - *buffer_ptr_ptr)
+  {
+    new_buffer_size = *buffer_size_ptr + len + SERIALIZE_BUFFER_INCREMENT_SIZE;
+
+    new_buffer_ptr = malloc(new_buffer_size);
+    if (new_buffer_ptr == NULL)
+    {
+      LOG_ERROR("malloc() failed to allocate %zu bytes", new_buffer_size);
+      return false;
+    }
+
+    new_last_ptr = new_buffer_ptr + (new_buffer_size - *buffer_size_ptr) + (*last_ptr_ptr - *buffer_ptr_ptr);
+    assert(*last_ptr_ptr - *buffer_ptr_ptr + len + SERIALIZE_BUFFER_INCREMENT_SIZE == new_last_ptr - new_buffer_ptr);
+
+    strcpy(new_last_ptr, *last_ptr_ptr);
+
+    free(*buffer_ptr_ptr);
+
+    *buffer_ptr_ptr = new_buffer_ptr;
+    *buffer_size_ptr = new_buffer_size;
+    *last_ptr_ptr = new_last_ptr;
+  }
+
+  assert(len <= *last_ptr_ptr - *buffer_ptr_ptr);
+
+  *last_ptr_ptr -= len;
+  memcpy(*last_ptr_ptr, string, len);
+
+  return true;
+}
+
+static
+char *
+strdup_escape(
+  const char * string)
+{
+  char * buffer;
+  const char * src_ptr;
+  char * dest_ptr;
+  size_t len;
+
+  len = 0;
+  for (src_ptr = string ; *src_ptr ; src_ptr++)
+  {
+    len++;
+
+    if (*src_ptr == SERIALIZE_SEPARATOR_CHAR ||
+        *src_ptr == SERIALIZE_ESCAPE_CHAR)
+    {
+      len++;
+    }
+  }
+  len++;                        /* terminating zero char */
+
+  buffer = malloc(len);
+  if (buffer == NULL)
+  {
+    LOG_ERROR("malloc() failed to allocate %zu bytes", len);
+    return NULL;
+  }
+
+  dest_ptr = buffer;
+  for (src_ptr = string ; *src_ptr ; src_ptr++)
+  {
+    if (*src_ptr == SERIALIZE_SEPARATOR_CHAR ||
+        *src_ptr == SERIALIZE_ESCAPE_CHAR)
+    {
+      *dest_ptr++ = SERIALIZE_ESCAPE_CHAR;
+    }
+
+    *dest_ptr++ = *src_ptr;
+  }
+  *dest_ptr = 0;
+
+  return buffer;
+}
+
+static
+void
+dynparam_get_parameter(
+  struct lv2dynparam_host_instance * instance_ptr,
+  struct lv2dynparam_host_parameter * parameter_ptr,
+  lv2dynparam_parameter_get_callback callback,
+  void * context)
+{
+  struct lv2dynparam_host_group * group_ptr;
+  char * buffer_ptr;
+  size_t buffer_size;
+  char * last_ptr;
+  char separator[2] = {SERIALIZE_SEPARATOR_CHAR, '\0'};
+  char * name;
+  bool success;
+  char value_str[100];
+  const char * value;
+  char * locale;
+
+  buffer_size = SERIALIZE_BUFFER_INITIAL_SIZE;
+  buffer_ptr = malloc(buffer_size);
+  if (buffer_ptr == NULL)
+  {
+      LOG_ERROR("malloc() failed to allocate %zu bytes", buffer_size);
+    goto exit;
+  }
+
+  last_ptr = buffer_ptr + buffer_size - 1;
+  *last_ptr = 0;
+
+  name = strdup_escape(parameter_ptr->name);
+  if (name == NULL)
+  {
+    goto free;
+  }
+
+  success = prepend_string(&buffer_ptr, &buffer_size, &last_ptr, name);
+  free(name);
+  if (!success)
+  {
+    goto free;
+  }
+
+  for (group_ptr = parameter_ptr->group_ptr;
+       group_ptr != instance_ptr->root_group_ptr;
+       group_ptr = group_ptr->parent_group_ptr)
+  {
+    if (!prepend_string(&buffer_ptr, &buffer_size, &last_ptr, separator))
+    {
+      goto free;
+    }
+
+    name = strdup_escape(group_ptr->name);
+    if (name == NULL)
+    {
+      goto free;
+    }
+
+    success = prepend_string(&buffer_ptr, &buffer_size, &last_ptr, name);
+    free(name);
+    if (!success)
+    {
+      goto free;
+    }
+  }
+
+  locale = strdup(setlocale(LC_NUMERIC, NULL));
+  setlocale(LC_NUMERIC, "POSIX");
+
+  switch (parameter_ptr->type)
+  {
+  case LV2DYNPARAM_PARAMETER_TYPE_BOOLEAN:
+    strcpy(value_str, parameter_ptr->data.boolean ? "true" : "false");
+    value = value_str;
+    break;
+  case LV2DYNPARAM_PARAMETER_TYPE_FLOAT:
+    sprintf(value_str, "%f", parameter_ptr->data.fpoint.value);
+    value = value_str;
+    break;
+  case LV2DYNPARAM_PARAMETER_TYPE_ENUM:
+    value = parameter_ptr->data.enumeration.values[parameter_ptr->data.enumeration.selected_value];
+    break;
+  case LV2DYNPARAM_PARAMETER_TYPE_INT:
+    sprintf(value_str, "%i", parameter_ptr->data.integer.value);
+    value = value_str;
+    break;
+  default:
+    assert(0);                  /* unknown parameter type, should be ignored in host callback */
+    setlocale(LC_NUMERIC, locale);
+    free(locale);
+    goto free;
+  }
+
+  setlocale(LC_NUMERIC, locale);
+  free(locale);
+
+  LOG_DEBUG("Parameter '%s' with value '%s'", last_ptr, value);
+  callback(context, last_ptr, value);
+
+free:
+  free(buffer_ptr);
+
+exit:
+  return;
+}
+
+static
+void
+dynparam_get_group_parameters(
+  struct lv2dynparam_host_instance * instance_ptr,
+  struct lv2dynparam_host_group * group_ptr,
+  lv2dynparam_parameter_get_callback callback,
+  void * context)
+{
+  struct list_head * node_ptr;
+  struct lv2dynparam_host_group * child_group_ptr;
+  struct lv2dynparam_host_parameter * parameter_ptr;
+
+  //LOG_DEBUG("Iterating \"%s\" groups begin", group_ptr->name);
+
+  list_for_each(node_ptr, &group_ptr->child_groups)
+  {
+    child_group_ptr = list_entry(node_ptr, struct lv2dynparam_host_group, siblings);
+
+    //LOG_DEBUG("host notify - group \"%s\"", child_group_ptr->name);
+
+    dynparam_get_group_parameters(instance_ptr, child_group_ptr, callback, context);
+  }
+
+  //LOG_DEBUG("Iterating \"%s\" groups end", group_ptr->name);
+  //LOG_DEBUG("Iterating \"%s\" params begin", group_ptr->name);
+
+  list_for_each(node_ptr, &group_ptr->child_params)
+  {
+    parameter_ptr = list_entry(node_ptr, struct lv2dynparam_host_parameter, siblings);
+
+    //LOG_DEBUG("host notify - parameter \"%s\"", parameter_ptr->name);
+
+    dynparam_get_parameter(instance_ptr, parameter_ptr, callback, context);
+  }
+
+  //LOG_DEBUG("Iterating \"%s\" params end", group_ptr->name);
+}
+
+static
+struct lv2dynparam_host_parameter *
+find_parameter_asciizz(
+  struct lv2dynparam_host_instance * instance_ptr,
+  const char * asciizz)
+{
+  const char * component;
+  const char * next_component;
+  size_t len;
+  struct lv2dynparam_host_group * group_ptr;
+  struct lv2dynparam_host_group * child_group_ptr;
+  struct lv2dynparam_host_parameter * parameter_ptr;
+  struct list_head * node_ptr;
+
+  component = asciizz;
+  group_ptr = instance_ptr->root_group_ptr;
+
+next_component:
+  if (*component == 0)
+  {
+    return NULL;
+  }
+
+  len = strlen(component);
+  next_component = component + len + 1;
+
+  if (*next_component != 0)
+  {
+    /* if this is not last component, we are searching for a group */
+
+    list_for_each(node_ptr, &group_ptr->child_groups)
+    {
+      child_group_ptr = list_entry(node_ptr, struct lv2dynparam_host_group, siblings);
+      if (strcmp(component, child_group_ptr->name) == 0)
+      {
+        group_ptr = child_group_ptr;
+        component += len + 1;
+        goto next_component;
+      }
+    }
+  }
+  else
+  {
+    /* if this is the last component, we are searching for a parameter  */
+
+    list_for_each(node_ptr, &group_ptr->child_params)
+    {
+      parameter_ptr = list_entry(node_ptr, struct lv2dynparam_host_parameter, siblings);
+      if (strcmp(component, parameter_ptr->name) == 0)
+      {
+        return parameter_ptr;
+      }
+    }
+  }
+
+  return NULL;
+}
+
 #define instance_ptr ((struct lv2dynparam_host_instance *)instance)
 
 void
@@ -666,7 +969,7 @@ lv2dynparam_host_ui_on(
     assert(instance_ptr->root_group_ptr != NULL); /* root group appears on host_attach */
 
     LOG_DEBUG("UI on - notifying for new things.");
-    //LOG_DEBUG("pending_childern_count is %u", instance_ptr->root_group_ptr->pending_childern_count);
+    LOG_DEBUG("pending_childern_count is %u", instance_ptr->root_group_ptr->pending_childern_count);
 
     instance_ptr->ui = true;
 
@@ -682,7 +985,7 @@ lv2dynparam_host_ui_on(
       instance_ptr,
       instance_ptr->root_group_ptr);
 
-    //LOG_DEBUG("pending_childern_count is %u", instance_ptr->root_group_ptr->pending_childern_count);
+    LOG_DEBUG("pending_childern_count is %u", instance_ptr->root_group_ptr->pending_childern_count);
     assert(instance_ptr->root_group_ptr->pending_childern_count == 0);
   }
 
@@ -724,7 +1027,7 @@ lv2dynparam_host_detach(
 #define parameter_ptr ((struct lv2dynparam_host_parameter *)parameter_handle)
 
 void
-dynparam_parameter_boolean_change(
+lv2dynparam_parameter_boolean_change(
   lv2dynparam_host_instance instance,
   lv2dynparam_host_parameter parameter_handle,
   bool value)
@@ -749,7 +1052,7 @@ dynparam_parameter_boolean_change(
 }
 
 void
-dynparam_parameter_float_change(
+lv2dynparam_parameter_float_change(
   lv2dynparam_host_instance instance,
   lv2dynparam_host_parameter parameter_handle,
   float value)
@@ -774,7 +1077,7 @@ dynparam_parameter_float_change(
 }
 
 void
-dynparam_parameter_enum_change(
+lv2dynparam_parameter_enum_change(
   lv2dynparam_host_instance instance,
   lv2dynparam_host_parameter parameter_handle,
   unsigned int selected_index_value)
@@ -799,7 +1102,7 @@ dynparam_parameter_enum_change(
 }
 
 void
-dynparam_parameter_int_change(
+lv2dynparam_parameter_int_change(
   lv2dynparam_host_instance instance,
   lv2dynparam_host_parameter parameter_handle,
   signed int value)
@@ -819,6 +1122,213 @@ dynparam_parameter_int_change(
   message_ptr->context.parameter = parameter_ptr;
 
   list_add_tail(&message_ptr->siblings, &instance_ptr->ui_to_realtime_queue);
+
+  audiolock_leave_ui(instance_ptr->lock);
+}
+
+void
+lv2dynparam_get_parameters(
+  lv2dynparam_host_instance instance,
+  lv2dynparam_parameter_get_callback callback,
+  void * context)
+{
+  audiolock_enter_ui(instance_ptr->lock);
+
+  if (instance_ptr->root_group_ptr != NULL)
+  {
+    dynparam_get_group_parameters(instance_ptr, instance_ptr->root_group_ptr, callback, context);
+  }
+
+  audiolock_leave_ui(instance_ptr->lock);
+}
+
+char *
+string_unescape(
+  const char * string)
+{
+  char * buffer;
+  size_t len;
+  char * dest_ptr;
+  const char * src_ptr;
+  bool escape;
+
+  //LOG_DEBUG("unescaping '%s'", string);
+
+  len = 0;
+  escape = false;
+  for (src_ptr = string ; *src_ptr ; src_ptr++)
+  {
+    if (*src_ptr == SERIALIZE_ESCAPE_CHAR && !escape)
+    {
+      escape = true;
+      continue;
+    }
+
+    len++;
+    escape = false;
+  }
+  len += 2;                     /* terminating zero chars */
+
+  //LOG_DEBUG("len = %zu", len);
+
+  buffer = malloc(len);
+  if (buffer == NULL)
+  {
+    LOG_ERROR("malloc() failed to allocate %zu bytes", len);
+    return NULL;
+  }
+
+  escape = false;
+  dest_ptr = buffer;
+  for (src_ptr = string ; *src_ptr ; src_ptr++)
+  {
+    //LOG_DEBUG("char '%c'", *src_ptr);
+    if (*src_ptr == SERIALIZE_ESCAPE_CHAR && !escape)
+    {
+      //LOG_DEBUG("escape");
+      escape = true;
+      continue;
+    }
+
+    if (*src_ptr == SERIALIZE_SEPARATOR_CHAR && !escape)
+    {
+      //LOG_DEBUG("separator");
+      assert(len > 0);
+      len--;
+      *dest_ptr++ = 0;
+      continue;
+    }
+
+    assert(len > 0);
+    len--;
+    *dest_ptr++ = *src_ptr;
+    escape = false;
+  }
+
+  //LOG_DEBUG("term1");
+  assert(len > 0);
+  len--;
+  dest_ptr[0] = 0;
+
+  //LOG_DEBUG("term2");
+  assert(len > 0);
+  len--;
+  dest_ptr[1] = 0;
+
+  return buffer;
+}
+
+#undef parameter_ptr
+
+void
+lv2dynparam_set_parameter(
+  lv2dynparam_host_instance instance,
+  const char * parameter_name,
+  const char * parameter_value)
+{
+  char * parameter_name_asciizz;
+  struct lv2dynparam_host_parameter * parameter_ptr;
+  struct lv2dynparam_host_message * message_ptr;
+  char * locale;
+  unsigned int i;
+  unsigned int selected_index;
+  bool selected_index_found;
+
+  audiolock_enter_ui(instance_ptr->lock);
+
+  parameter_name_asciizz = string_unescape(parameter_name);
+  if (parameter_name_asciizz == NULL)
+  {
+    return;
+  }
+
+  parameter_ptr = find_parameter_asciizz(instance_ptr, parameter_name_asciizz);
+  if (parameter_ptr != NULL)
+  {
+    LOG_DEBUG("Setting parameter '%s' to '%s'", parameter_name, parameter_value);
+
+    message_ptr = rtsafe_memory_pool_allocate_sleepy(instance_ptr->messages_pool);
+    message_ptr->message_type = LV2DYNPARAM_HOST_MESSAGE_TYPE_PARAMETER_CHANGE;
+    message_ptr->context.parameter = parameter_ptr;
+
+    locale = strdup(setlocale(LC_NUMERIC, NULL));
+    setlocale(LC_NUMERIC, "POSIX");
+
+    switch (parameter_ptr->type)
+    {
+    case LV2DYNPARAM_PARAMETER_TYPE_BOOLEAN:
+      if (strcmp(parameter_value, "true") == 0)
+      {
+        parameter_ptr->data.boolean = true;
+      }
+      else if (strcmp(parameter_value, "false") == 0)
+      {
+        parameter_ptr->data.boolean = false;
+      }
+      else
+      {
+        LOG_ERROR("Wrong value '%s' for boolean parameter '%s'", parameter_value, parameter_name);
+        goto free_locale;
+      }
+      break;
+    case LV2DYNPARAM_PARAMETER_TYPE_FLOAT:
+      if (sscanf(parameter_value, "%f", &parameter_ptr->data.fpoint.value) != 1)
+      {
+        LOG_ERROR("failed to convert value '%s' of parameter '%s' to float", parameter_value, parameter_name);
+        goto free_locale;
+      }
+      break;
+    case LV2DYNPARAM_PARAMETER_TYPE_ENUM:
+      selected_index_found = false;
+      for (i = 0 ; i < parameter_ptr->data.enumeration.values_count ; i++)
+      {
+        if (strcmp(parameter_ptr->data.enumeration.values[i], parameter_value) == 0)
+        {
+          selected_index = i;
+          selected_index_found = true;
+          break;
+        }
+      }
+
+      if (!selected_index_found)
+      {
+        LOG_ERROR("Wrong value '%s' for enum parameter '%s'", parameter_value, parameter_name);
+        goto free_locale;
+      }
+
+      parameter_ptr->data.enumeration.selected_value = selected_index;
+      break;
+    case LV2DYNPARAM_PARAMETER_TYPE_INT:
+      if (sscanf(parameter_value, "%i", &parameter_ptr->data.integer.value) != 1)
+      {
+        LOG_ERROR("failed to convert value '%s' of parameter '%s' to signed int", parameter_value, parameter_name);
+        goto free_locale;
+      }
+      break;
+    default:
+      LOG_ERROR("Parameter change for parameter of unknown type %u received", parameter_ptr->type);
+      goto free_locale;
+    }
+
+    list_add_tail(&message_ptr->siblings, &instance_ptr->ui_to_realtime_queue);
+  }
+  else
+  {
+    LOG_ERROR("Not setting unknown parameter '%s' to '%s'", parameter_name, parameter_value);
+    /* TODO: save parameter_name_asciizz and parameter_value in a "pending parameter set" list */
+    /* When parameter with pending set appears, set it to the value */
+  }
+
+  goto free;
+
+free_locale:
+  setlocale(LC_NUMERIC, locale);
+  free(locale);
+
+  rtsafe_memory_pool_deallocate(instance_ptr->messages_pool, message_ptr);
+
+free:
+  free(parameter_name_asciizz);
 
   audiolock_leave_ui(instance_ptr->lock);
 }

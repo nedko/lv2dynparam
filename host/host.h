@@ -413,7 +413,7 @@ dynparam_parameter_boolean_changed(
  * @param value the new value
  */
 void
-dynparam_parameter_boolean_change(
+lv2dynparam_parameter_boolean_change(
   lv2dynparam_host_instance instance,
   lv2dynparam_host_parameter parameter_handle,
   bool value);
@@ -428,7 +428,7 @@ dynparam_parameter_boolean_change(
  * @param value the new value
  */
 void
-dynparam_parameter_float_change(
+lv2dynparam_parameter_float_change(
   lv2dynparam_host_instance instance,
   lv2dynparam_host_parameter parameter_handle,
   float value);
@@ -443,7 +443,7 @@ dynparam_parameter_float_change(
  * @param selected_index_value index of the new value
  */
 void
-dynparam_parameter_enum_change(
+lv2dynparam_parameter_enum_change(
   lv2dynparam_host_instance instance,
   lv2dynparam_host_parameter parameter_handle,
   unsigned int selected_index_value);
@@ -458,9 +458,53 @@ dynparam_parameter_enum_change(
  * @param value the new value
  */
 void
-dynparam_parameter_int_change(
+lv2dynparam_parameter_int_change(
   lv2dynparam_host_instance instance,
   lv2dynparam_host_parameter parameter_handle,
   signed int value);
+
+/**
+ * Typedef for callback function to be called from dynparam_get_parameters()
+ *
+ * @param context User context, as supplied as dynparam_get_parameters() parameter
+ * @param parameter_name Parameter name
+ * @param parameter_value Parameter value, as string
+ */
+typedef
+void
+(* lv2dynparam_parameter_get_callback)(
+  void * context,
+  const char * parameter_name,
+  const char * parameter_value);
+
+/**
+ * Call this funtion to get parameters of plugin, as pairs of parameter name and value strings.
+ * Must be called from the UI thread.
+ * This function may sleep/lock.
+ *
+ * @param instance Handle to instance received from lv2dynparam_host_attach()
+ * @param callback Callback to be called for each parameter
+ * @param context User context to be supplied as parameter when callback is called
+ */
+void
+lv2dynparam_get_parameters(
+  lv2dynparam_host_instance instance,
+  lv2dynparam_parameter_get_callback callback,
+  void * context);
+
+/**
+ * Call this function to set parameter of plugin, as pair of parameter name and value strings.
+ * Must be called from the UI thread.
+ * This function may sleep/lock.
+ *
+ * @param instance Handle to instance received from lv2dynparam_host_attach()
+ * @param parameter_name Parameter name
+ * @param parameter_value Parameter value, as string
+ */
+void
+lv2dynparam_set_parameter(
+  lv2dynparam_host_instance instance,
+  const char * parameter_name,
+  const char * parameter_value);
 
 #endif /* #ifndef DYNPARAM_H__5090F477_0BE7_439F_BF1D_F2EB78822760__INCLUDED */

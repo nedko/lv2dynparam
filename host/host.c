@@ -1033,17 +1033,19 @@ parameter_value_change(
     {
       if (value_type == LV2DYNPARAM_PARAMETER_TYPE_STRING)
       {
-        for (i = 0 ; i < value_ptr->enumeration.values_count ; i++)
+        LOG_DEBUG("searching for enum value '%s'", value_ptr->string);
+        for (i = 0 ; i < parameter_ptr->data.enumeration.values_count ; i++)
         {
-          if (strcmp(value_ptr->enumeration.values[i], value_ptr->string) == 0)
+          if (strcmp(parameter_ptr->data.enumeration.values[i], value_ptr->string) == 0)
           {
-            value_ptr->enumeration.selected_value = i;
-            goto set;
+            parameter_ptr->data.enumeration.selected_value = i;
+            goto push;
           }
         }
       }
       else
       {
+        parameter_ptr->data.enumeration.selected_value = value_ptr->enumeration.selected_value;
         goto push;
       }
 
@@ -1051,7 +1053,6 @@ parameter_value_change(
       return;
     }
 
-  set:
     switch (parameter_ptr->type)
     {
     case LV2DYNPARAM_PARAMETER_TYPE_BOOLEAN:
@@ -1064,6 +1065,7 @@ parameter_value_change(
       parameter_ptr->data.integer.value = value_ptr->integer.value;
       break;
     case LV2DYNPARAM_PARAMETER_TYPE_ENUM:
+      parameter_ptr->data.integer.value = value_ptr->integer.value;
       /* whoa? we should enter the "if type is enum" statement above */
       assert(0);
     default:
@@ -1500,7 +1502,7 @@ set_parameter(
     type = LV2DYNPARAM_PARAMETER_TYPE_FLOAT;
     break;
   case SERIALIZE_TYPE_CHAR_STRING:
-    type = LV2DYNPARAM_PARAMETER_TYPE_ENUM;
+    type = LV2DYNPARAM_PARAMETER_TYPE_STRING;
     break;
   case SERIALIZE_TYPE_CHAR_INT:
     type = LV2DYNPARAM_PARAMETER_TYPE_INT;

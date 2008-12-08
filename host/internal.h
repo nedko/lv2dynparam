@@ -23,7 +23,7 @@
 #ifndef DYNPARAM_INTERNAL_H__86778596_B1A9_4BD7_A14A_BECBD5589468__INCLUDED
 #define DYNPARAM_INTERNAL_H__86778596_B1A9_4BD7_A14A_BECBD5589468__INCLUDED
 
-#define LV2DYNPARAM_PARAMETER_TYPE_COMMAND   0
+#define LV2DYNPARAM_PARAMETER_TYPE_UNKNOWN   0
 #define LV2DYNPARAM_PARAMETER_TYPE_FLOAT     1
 #define LV2DYNPARAM_PARAMETER_TYPE_INT       2
 #define LV2DYNPARAM_PARAMETER_TYPE_NOTE      3
@@ -56,6 +56,30 @@ struct lv2dynparam_host_group
   void * ui_context;
 };
 
+union lv2dynparam_host_parameter_value
+{
+  bool boolean;
+  struct
+  {
+    float value;
+    float min;
+    float max;
+  } fpoint;
+  struct
+  {
+    signed int value;
+    signed int min;
+    signed int max;
+  } integer;
+  struct
+  {
+    char ** values;
+    unsigned int values_count;
+    unsigned int selected_value;
+  } enumeration;
+  char * string;
+};
+
 struct lv2dynparam_host_parameter
 {
   struct list_head siblings;
@@ -70,28 +94,7 @@ struct lv2dynparam_host_parameter
   void * min_ptr;
   void * max_ptr;
 
-  union
-  {
-    bool boolean;
-    struct
-    {
-      float value;
-      float min;
-      float max;
-    } fpoint;
-    struct
-    {
-      signed int value;
-      signed int min;
-      signed int max;
-    } integer;
-    struct
-    {
-      char ** values;
-      unsigned int values_count;
-      unsigned int selected_value;
-    } enumeration;
-  } data;
+  union lv2dynparam_host_parameter_value data;
 
   unsigned int pending_state;
 
@@ -109,8 +112,17 @@ struct lv2dynparam_host_command
   void * ui_context;
 };
 
+struct lv2dynparam_host_parameter_pending_value_change
+{
+  struct list_head siblings;
+  char * name_asciizz;
+  unsigned int type;
+  union lv2dynparam_host_parameter_value data;
+};
+
 #define LV2DYNPARAM_HOST_MESSAGE_TYPE_PARAMETER_CHANGE          0
 #define LV2DYNPARAM_HOST_MESSAGE_TYPE_COMMAND_EXECUTE           1
+#define LV2DYNPARAM_HOST_MESSAGE_TYPE_UNKNOWN_PARAMETER_CHANGE  2
 
 struct lv2dynparam_host_message
 {
@@ -123,6 +135,7 @@ struct lv2dynparam_host_message
     struct lv2dynparam_host_group * group;
     struct lv2dynparam_host_parameter * parameter;
     struct lv2dynparam_host_command * command;
+    struct lv2dynparam_host_parameter_pending_value_change * value_change;
   } context;
 };
 
@@ -140,11 +153,14 @@ struct lv2dynparam_host_instance
   struct list_head realtime_to_ui_queue; /* protected by the audiolock */
   struct list_head ui_to_realtime_queue; /* protected by the audiolock */
 
+  struct list_head pending_parameter_value_changes;
+
   rtsafe_memory_handle memory;
 
   rtsafe_memory_pool_handle groups_pool;
   rtsafe_memory_pool_handle parameters_pool;
   rtsafe_memory_pool_handle messages_pool;
+  rtsafe_memory_pool_handle pending_parameter_value_changes_pool;
 };
 
 bool

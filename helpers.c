@@ -51,6 +51,27 @@ lv2dynparam_strdup_atomic(
   return dest;
 }
 
+char *
+lv2dynparam_strdup_sleepy(
+  rtsafe_memory_handle memory,
+  const char * source)
+{
+  size_t size;
+  char * dest;
+
+  size = strlen(source) + 1;
+
+  dest = rtsafe_memory_allocate_sleepy(memory, size);
+  if (dest == NULL)
+  {
+    return NULL;
+  }
+
+  memcpy(dest, source, size);
+
+  return dest;
+}
+
 char **
 lv2dynparam_enum_duplicate(
   rtsafe_memory_handle memory,

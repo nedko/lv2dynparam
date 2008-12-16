@@ -98,48 +98,6 @@ lv2dynparam_host_ui_run(
   lv2dynparam_host_instance instance);
 
 /**
- * Call this function to change parameter as response to MIDI CC.
- * If controller is not associated with any parameter, cc will be ignored.
- * Must be called from from audio/midi realtime thread.
- * This function will not sleep/lock.
- *
- * @param controller MIDI controller
- * @param value MIDI controller value
- */
-void
-lv2dynparam_host_cc(
-  unsigned int controller,
-  unsigned int value);
-
-/**
- * Call this function to associate MIDI CC with parameter
- * Must be called from from the UI thread.
- * This function may sleep/lock.
- *
- * @param instance Handle to instance received from lv2dynparam_host_attach()
- * @param parameter Parameter to associate CC with
- * @param controller MIDI controller
- */
-void
-lv2dynparam_host_cc_configure(
-  lv2dynparam_host_instance instance,
-  lv2dynparam_host_parameter parameter,
-  unsigned int controller);
-
-/**
- * Call this function to associate parameter from MIDI CC
- * Must be called from from the UI thread.
- * This function may sleep/lock.
- *
- * @param instance Handle to instance received from lv2dynparam_host_attach()
- * @param parameter Parameter to associate CC with
- */
-void
-lv2dynparam_host_cc_unconfigure(
-  lv2dynparam_host_instance instance,
-  lv2dynparam_host_parameter parameter);
-
-/**
  * Call this function to trigger dynparams appear.
  * Must be called from from the UI thread.
  * This function may sleep/lock.

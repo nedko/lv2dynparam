@@ -166,6 +166,7 @@ lv2dynparam_host_parameter_appear(
   }
 
   param_ptr->param_handle = parameter;
+  param_ptr->context_set = false;
 
   instance_ptr->callbacks_ptr->parameter_get_name(parameter, param_ptr->name);
   instance_ptr->callbacks_ptr->parameter_get_type_uri(parameter, param_ptr->type_uri);
@@ -218,20 +219,20 @@ lv2dynparam_host_parameter_appear(
   switch (param_ptr->type)
   {
   case LV2DYNPARAM_PARAMETER_TYPE_BOOLEAN:
-    param_ptr->data.boolean = *(unsigned char *)(param_ptr->value_ptr);
-    LOG_DEBUG("Boolean parameter with value %s", param_ptr->data.boolean ? "TRUE" : "FALSE");
+    param_ptr->value.boolean = *(unsigned char *)(param_ptr->value_ptr);
+    LOG_DEBUG("Boolean parameter with value %s", param_ptr->value.boolean ? "TRUE" : "FALSE");
     break;
   case LV2DYNPARAM_PARAMETER_TYPE_FLOAT:
-    param_ptr->data.fpoint.value = *(float *)(param_ptr->value_ptr);
-    LOG_DEBUG("Float parameter with value %f", param_ptr->data.fpoint.value);
+    param_ptr->value.fpoint = *(float *)(param_ptr->value_ptr);
+    LOG_DEBUG("Float parameter with value %f", param_ptr->value.fpoint);
     break;
   case LV2DYNPARAM_PARAMETER_TYPE_ENUM:
-    param_ptr->data.enumeration.selected_value = *(unsigned int *)(param_ptr->value_ptr);
-    LOG_DEBUG("Enum parameter with selected value index %u", param_ptr->data.enumeration.selected_value);
+    param_ptr->value.enum_selected_index = *(unsigned int *)(param_ptr->value_ptr);
+    LOG_DEBUG("Enum parameter with selected value index %u", param_ptr->value.enum_selected_index);
     break;
   case LV2DYNPARAM_PARAMETER_TYPE_INT:
-    param_ptr->data.integer.value = *(signed int *)(param_ptr->value_ptr);
-    LOG_DEBUG("Integer parameter with value %d", param_ptr->data.integer.value);
+    param_ptr->value.integer = *(signed int *)(param_ptr->value_ptr);
+    LOG_DEBUG("Integer parameter with value %d", param_ptr->value.integer);
     break;
   }
 
@@ -239,44 +240,44 @@ lv2dynparam_host_parameter_appear(
   switch (param_ptr->type)
   {
   case LV2DYNPARAM_PARAMETER_TYPE_FLOAT:
-    param_ptr->data.fpoint.min = *(float *)(param_ptr->min_ptr);
-    param_ptr->data.fpoint.max = *(float *)(param_ptr->max_ptr);
-    LOG_DEBUG("Float parameter with range %f - %f", param_ptr->data.fpoint.min, param_ptr->data.fpoint.max);
+    param_ptr->range.fpoint.min = *(float *)(param_ptr->min_ptr);
+    param_ptr->range.fpoint.max = *(float *)(param_ptr->max_ptr);
+    LOG_DEBUG("Float parameter with range %f - %f", param_ptr->range.fpoint.min, param_ptr->range.fpoint.max);
     break;
   case LV2DYNPARAM_PARAMETER_TYPE_INT:
-    param_ptr->data.integer.min = *(signed int *)(param_ptr->min_ptr);
-    param_ptr->data.integer.max = *(signed int *)(param_ptr->max_ptr);
-    LOG_DEBUG("Integer parameter with range %d - %d", param_ptr->data.integer.min, param_ptr->data.integer.max);
+    param_ptr->range.integer.min = *(signed int *)(param_ptr->min_ptr);
+    param_ptr->range.integer.max = *(signed int *)(param_ptr->max_ptr);
+    LOG_DEBUG("Integer parameter with range %d - %d", param_ptr->range.integer.min, param_ptr->range.integer.max);
     break;
   case LV2DYNPARAM_PARAMETER_TYPE_ENUM:
-    param_ptr->data.enumeration.values_count = *(unsigned int *)(param_ptr->max_ptr);
+    param_ptr->range.enumeration.values_count = *(unsigned int *)(param_ptr->max_ptr);
 
 /*     LOG_DEBUG("Enum parameter with %u possible values", param_ptr->data.enumeration.values_count); */
-/*     for (i = 0 ; i < param_ptr->data.enumeration.values_count ; i++) */
+/*     for (i = 0 ; i < param_ptr->range.enumeration.values_count ; i++) */
 /*     { */
 /*       LOG_DEBUG("\"%s\"", (*(const char * const * *)(param_ptr->min_ptr))[i]); */
 /*     } */
 
-    param_ptr->data.enumeration.values =
+    param_ptr->range.enumeration.values =
       lv2dynparam_enum_duplicate(
         instance_ptr->memory,
         *(const char * const * *)(param_ptr->min_ptr),
-        param_ptr->data.enumeration.values_count);
-    if (param_ptr->data.enumeration.values == NULL)
+        param_ptr->range.enumeration.values_count);
+    if (param_ptr->range.enumeration.values == NULL)
     {
       goto fail_clear_hints;
     }
 
-    LOG_DEBUG("Enum parameter with %u possible values", param_ptr->data.enumeration.values_count);
-    for (i = 0 ; i < param_ptr->data.enumeration.values_count ; i++)
+    LOG_DEBUG("Enum parameter with %u possible values", param_ptr->range.enumeration.values_count);
+    for (i = 0 ; i < param_ptr->range.enumeration.values_count ; i++)
     {
-      LOG_DEBUG("\"%s\"", param_ptr->data.enumeration.values[i]);
+      LOG_DEBUG("\"%s\"", param_ptr->range.enumeration.values[i]);
     }
 
     LOG_DEBUG(
       "Selected value is \"%s\" at index  %u",
-      param_ptr->data.enumeration.values[param_ptr->data.enumeration.selected_value],
-      param_ptr->data.enumeration.selected_value);
+      param_ptr->range.enumeration.values[param_ptr->value.enum_selected_index],
+      param_ptr->value.enum_selected_index);
 
     break;
   }
@@ -285,6 +286,7 @@ lv2dynparam_host_parameter_appear(
   param_ptr->group_ptr = group_ptr;
   list_add_tail(&param_ptr->siblings, &group_ptr->child_params);
   param_ptr->pending_state = LV2DYNPARAM_PENDING_APPEAR;
+  param_ptr->context_set = false;
   lv2dynparam_host_group_pending_children_count_increment(group_ptr);
 
   *parameter_host_context = param_ptr;

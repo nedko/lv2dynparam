@@ -23,15 +23,6 @@
 #ifndef DYNPARAM_INTERNAL_H__86778596_B1A9_4BD7_A14A_BECBD5589468__INCLUDED
 #define DYNPARAM_INTERNAL_H__86778596_B1A9_4BD7_A14A_BECBD5589468__INCLUDED
 
-#define LV2DYNPARAM_PARAMETER_TYPE_UNKNOWN   0
-#define LV2DYNPARAM_PARAMETER_TYPE_FLOAT     1
-#define LV2DYNPARAM_PARAMETER_TYPE_INT       2
-#define LV2DYNPARAM_PARAMETER_TYPE_NOTE      3
-#define LV2DYNPARAM_PARAMETER_TYPE_STRING    4
-#define LV2DYNPARAM_PARAMETER_TYPE_FILENAME  5
-#define LV2DYNPARAM_PARAMETER_TYPE_BOOLEAN   6
-#define LV2DYNPARAM_PARAMETER_TYPE_ENUM      7
-
 #define LV2DYNPARAM_PENDING_NOTHING    0 /* nothing pending */
 #define LV2DYNPARAM_PENDING_APPEAR     1 /* pending appear */
 #define LV2DYNPARAM_PENDING_DISAPPEAR  2 /* pending disappear */
@@ -56,30 +47,6 @@ struct lv2dynparam_host_group
   void * ui_context;
 };
 
-union lv2dynparam_host_parameter_value
-{
-  bool boolean;
-  struct
-  {
-    float value;
-    float min;
-    float max;
-  } fpoint;
-  struct
-  {
-    signed int value;
-    signed int min;
-    signed int max;
-  } integer;
-  struct
-  {
-    char ** values;
-    unsigned int values_count;
-    unsigned int selected_value;
-  } enumeration;
-  char * string;
-};
-
 struct lv2dynparam_host_parameter
 {
   struct list_head siblings;
@@ -94,9 +61,13 @@ struct lv2dynparam_host_parameter
   void * min_ptr;
   void * max_ptr;
 
-  union lv2dynparam_host_parameter_value data;
+  union lv2dynparam_host_parameter_range range;
+  union lv2dynparam_host_parameter_value value;
 
   unsigned int pending_state;
+
+  bool context_set;
+  void * context;
 
   void * ui_context;
 };
@@ -141,7 +112,7 @@ struct lv2dynparam_host_message
 
 struct lv2dynparam_host_instance
 {
-  void * instance_ui_context;
+  void * instance_context;
   audiolock_handle lock;
   const struct lv2dynparam_plugin_callbacks * callbacks_ptr;
   LV2_Handle lv2instance;
@@ -161,6 +132,9 @@ struct lv2dynparam_host_instance
   rtsafe_memory_pool_handle parameters_pool;
   rtsafe_memory_pool_handle messages_pool;
   rtsafe_memory_pool_handle pending_parameter_value_changes_pool;
+
+  lv2dynparam_parameter_created parameter_created_callback;
+  lv2dynparam_parameter_destroying parameter_destroying_callback;
 };
 
 bool

@@ -62,8 +62,8 @@ lv2dynparam_host_parameter_free(
   case LV2DYNPARAM_PARAMETER_TYPE_ENUM:
     lv2dynparam_enum_free(
       instance_ptr->memory,
-      parameter_ptr->data.enumeration.values,
-      parameter_ptr->data.enumeration.values_count);
+      parameter_ptr->range.enumeration.values,
+      parameter_ptr->range.enumeration.values_count);
     return;
   }
 
@@ -129,19 +129,31 @@ lv2dynparam_host_attach(
   const LV2_Descriptor * lv2descriptor,
   LV2_Handle lv2instance,
   struct lv2_rtsafe_memory_pool_provider * rtmempool_ptr,
-  void * instance_ui_context,
+  void * instance_context,
+  lv2dynparam_parameter_created parameter_created_callback,
+  lv2dynparam_parameter_destroying parameter_destroying_callback,
   lv2dynparam_host_instance * instance_handle_ptr)
 {
   struct lv2dynparam_host_instance * instance_ptr;
 
-  instance_ptr = malloc(sizeof(struct lv2dynparam_host_instance));
-  if (instance_ptr == NULL)
+  if ((parameter_created_callback == NULL && parameter_destroying_callback != NULL) ||
+      (parameter_created_callback != NULL && parameter_destroying_callback == NULL))
   {
-    /* out of memory */
+    LOG_ERROR("parameter lifecycle callbacks should either not be supplied or should be supplied both");
     goto fail;
   }
 
-  instance_ptr->instance_ui_context = instance_ui_context;
+  instance_ptr = malloc(sizeof(struct lv2dynparam_host_instance));
+  if (instance_ptr == NULL)
+  {
+    LOG_ERROR("Failed to allocate struct lv2dynparam_host_instance");
+    goto fail;
+  }
+
+  instance_ptr->parameter_created_callback = parameter_created_callback;
+  instance_ptr->parameter_destroying_callback = parameter_destroying_callback;
+
+  instance_ptr->instance_context = instance_context;
 
   instance_ptr->lock = audiolock_create_slow();
   if (instance_ptr->lock == AUDIOLOCK_HANDLE_INVALID_VALUE)
@@ -306,9 +318,9 @@ lv2dynparam_host_notify_group_appeared(
     parent_group_ui_context = NULL;
   }
 
-  dynparam_group_appeared(
+  dynparam_ui_group_appeared(
     group_ptr,
-    instance_ptr->instance_ui_context,
+    instance_ptr->instance_context,
     parent_group_ui_context,
     group_ptr->name,
     &group_ptr->hints,
@@ -334,12 +346,15 @@ lv2dynparam_host_notify_group_disappeared(
     parent_group_ui_context = NULL;
   }
 
-  dynparam_group_disappeared(
-    instance_ptr->instance_ui_context,
+  dynparam_ui_group_disappeared(
+    instance_ptr->instance_context,
     parent_group_ui_context,
     group_ptr->ui_context);
 }
 
+/* TODO: this should be moved to when parameter appeares in realtime thread, lv2dynparam_host_parameter_appear() */
+/* we dont really have test case for this yet */
+#if 0
 static
 const char *
 get_prev_component(
@@ -418,15 +433,8 @@ loop:
   goto loop;
 }
 
-void
-lv2dynparam_host_notify_parameter_appeared(
-  struct lv2dynparam_host_instance * instance_ptr,
-  struct lv2dynparam_host_parameter * parameter_ptr)
-{
   struct list_head * node_ptr;
   struct lv2dynparam_host_parameter_pending_value_change * value_ptr;
-
-  LOG_DEBUG("lv2dynparam_host_notify_parameter_appeared() called for \"%s\".", parameter_ptr->name);
 
   value_ptr = NULL;
   list_for_each(node_ptr, &instance_ptr->pending_parameter_value_changes)
@@ -446,59 +454,6 @@ lv2dynparam_host_notify_parameter_appeared(
     LOG_ERROR("Found value for parameter '%s'", parameter_ptr->name);
   }
 
-  switch (parameter_ptr->type)
-  {
-  case LV2DYNPARAM_PARAMETER_TYPE_BOOLEAN:
-    dynparam_parameter_boolean_appeared(
-      parameter_ptr,
-      instance_ptr->instance_ui_context,
-      parameter_ptr->group_ptr->ui_context,
-      parameter_ptr->name,
-      &parameter_ptr->hints,
-      parameter_ptr->data.boolean,
-      &parameter_ptr->ui_context);
-    break;
-  case LV2DYNPARAM_PARAMETER_TYPE_FLOAT:
-    dynparam_parameter_float_appeared(
-      parameter_ptr,
-      instance_ptr->instance_ui_context,
-      parameter_ptr->group_ptr->ui_context,
-      parameter_ptr->name,
-      &parameter_ptr->hints,
-      parameter_ptr->data.fpoint.value,
-      parameter_ptr->data.fpoint.min,
-      parameter_ptr->data.fpoint.max,
-      &parameter_ptr->ui_context);
-    break;
-  case LV2DYNPARAM_PARAMETER_TYPE_ENUM:
-    dynparam_parameter_enum_appeared(
-      parameter_ptr,
-      instance_ptr->instance_ui_context,
-      parameter_ptr->group_ptr->ui_context,
-      parameter_ptr->name,
-      &parameter_ptr->hints,
-      parameter_ptr->data.enumeration.selected_value,
-      (const char * const *)parameter_ptr->data.enumeration.values,
-      parameter_ptr->data.enumeration.values_count,
-      &parameter_ptr->ui_context);
-    break;
-  case LV2DYNPARAM_PARAMETER_TYPE_INT:
-    dynparam_parameter_int_appeared(
-      parameter_ptr,
-      instance_ptr->instance_ui_context,
-      parameter_ptr->group_ptr->ui_context,
-      parameter_ptr->name,
-      &parameter_ptr->hints,
-      parameter_ptr->data.integer.value,
-      parameter_ptr->data.integer.min,
-      parameter_ptr->data.integer.max,
-      &parameter_ptr->ui_context);
-    break;
-  default:
-    assert(0);                  /* unknown parameter type, should be ignored in host callback */
-    break;
-  }
-
   if (value_ptr != NULL)
   {
     if (value_ptr->type == LV2DYNPARAM_PARAMETER_TYPE_STRING)
@@ -509,47 +464,9 @@ lv2dynparam_host_notify_parameter_appeared(
     rtsafe_memory_deallocate(value_ptr->name_asciizz);
     rtsafe_memory_pool_deallocate(instance_ptr->pending_parameter_value_changes_pool, value_ptr);
   }
-}
 
-void
-lv2dynparam_host_notify_parameter_disappeared(
-  struct lv2dynparam_host_instance * instance_ptr,
-  struct lv2dynparam_host_parameter * parameter_ptr)
-{
-  LOG_DEBUG("lv2dynparam_host_notify_parameter_disappeared() called for \"%s\".", parameter_ptr->name);
+#endif
 
-  switch (parameter_ptr->type)
-  {
-  case LV2DYNPARAM_PARAMETER_TYPE_BOOLEAN:
-    dynparam_parameter_boolean_disappeared(
-      instance_ptr->instance_ui_context,
-      parameter_ptr->group_ptr->ui_context,
-      parameter_ptr->ui_context);
-    break;
-  case LV2DYNPARAM_PARAMETER_TYPE_FLOAT:
-    dynparam_parameter_float_disappeared(
-      instance_ptr->instance_ui_context,
-      parameter_ptr->group_ptr->ui_context,
-      parameter_ptr->ui_context);
-    break;
-  case LV2DYNPARAM_PARAMETER_TYPE_ENUM:
-    dynparam_parameter_enum_disappeared(
-      instance_ptr->instance_ui_context,
-      parameter_ptr->group_ptr->ui_context,
-      parameter_ptr->ui_context);
-    break;
-  case LV2DYNPARAM_PARAMETER_TYPE_INT:
-    dynparam_parameter_int_disappeared(
-      instance_ptr->instance_ui_context,
-      parameter_ptr->group_ptr->ui_context,
-      parameter_ptr->ui_context);
-    break;
-  default:
-    assert(0);                  /* unknown parameter type, should be ignored in host callback and assert on appear */
-  }
-}
-
-/* called when ui is shown */
 void
 lv2dynparam_host_notify(
   struct lv2dynparam_host_instance * instance_ptr,
@@ -577,12 +494,15 @@ lv2dynparam_host_notify(
     switch (child_group_ptr->pending_state)
     {
     case LV2DYNPARAM_PENDING_APPEAR:
-      /* UI knows nothing about this group - notify it */
-      lv2dynparam_host_notify_group_appeared(
-        instance_ptr,
-        child_group_ptr);
-      child_group_ptr->pending_state = LV2DYNPARAM_PENDING_NOTHING;
-      lv2dynparam_host_group_pending_children_count_decrement(group_ptr);
+      if (instance_ptr->ui)
+      {
+        /* UI knows nothing about this group - notify it */
+        lv2dynparam_host_notify_group_appeared(
+          instance_ptr,
+          child_group_ptr);
+        child_group_ptr->pending_state = LV2DYNPARAM_PENDING_NOTHING;
+        lv2dynparam_host_group_pending_children_count_decrement(group_ptr);
+      }
       break;
     case LV2DYNPARAM_PENDING_NOTHING:
       break;
@@ -620,18 +540,56 @@ lv2dynparam_host_notify(
     switch (parameter_ptr->pending_state)
     {
     case LV2DYNPARAM_PENDING_APPEAR:
-      lv2dynparam_host_notify_parameter_appeared(
-        instance_ptr,
-        parameter_ptr);
-      parameter_ptr->pending_state = LV2DYNPARAM_PENDING_NOTHING;
-      lv2dynparam_host_group_pending_children_count_decrement(group_ptr);
+      if (!parameter_ptr->context_set)
+      {
+        instance_ptr->parameter_created_callback(
+          instance_ptr->instance_context,
+          parameter_ptr,
+          &parameter_ptr->context);
+
+        parameter_ptr->context_set = true;
+      }
+
+      if (instance_ptr->ui)
+      {
+        dynparam_ui_parameter_appeared(
+          parameter_ptr,
+          instance_ptr->instance_context,
+          parameter_ptr->group_ptr->ui_context,
+          parameter_ptr->type,
+          parameter_ptr->name,
+          &parameter_ptr->hints,
+          parameter_ptr->value,
+          parameter_ptr->range,
+          parameter_ptr->context,
+          &parameter_ptr->ui_context);
+
+        parameter_ptr->pending_state = LV2DYNPARAM_PENDING_NOTHING;
+        lv2dynparam_host_group_pending_children_count_decrement(group_ptr);
+      }
       break;
     case LV2DYNPARAM_PENDING_NOTHING:
       break;
     case LV2DYNPARAM_PENDING_DISAPPEAR:
-      lv2dynparam_host_notify_parameter_disappeared(
-        instance_ptr,
-        parameter_ptr);
+      if (instance_ptr->ui)
+      {
+        dynparam_ui_parameter_disappeared(
+          instance_ptr->instance_context,
+          parameter_ptr->group_ptr->ui_context,
+          parameter_ptr->type,
+          parameter_ptr->context,
+          parameter_ptr->ui_context);
+      }
+
+      if (instance_ptr->parameter_destroying_callback != NULL)
+      {
+        assert(parameter_ptr->context_set);
+        instance_ptr->parameter_destroying_callback(
+          instance_ptr->instance_context,
+          parameter_ptr->context);
+        parameter_ptr->context_set = false;
+      }
+
       parameter_ptr->pending_state = LV2DYNPARAM_PENDING_NOTHING;
       lv2dynparam_host_group_pending_children_count_decrement(group_ptr);
       list_del(&parameter_ptr->siblings);
@@ -674,9 +632,12 @@ lv2dynparam_host_group_hide(
     {
       //LOG_DEBUG("Hidding parameter \"%s\" group", parameter_ptr->name);
 
-      lv2dynparam_host_notify_parameter_disappeared(
-        instance_ptr,
-        parameter_ptr);
+      dynparam_ui_parameter_disappeared(
+        instance_ptr->instance_context,
+        parameter_ptr->group_ptr->ui_context,
+        parameter_ptr->type,
+        parameter_ptr->context,
+        parameter_ptr->ui_context);
 
       parameter_ptr->pending_state = LV2DYNPARAM_PENDING_APPEAR;
       lv2dynparam_host_group_pending_children_count_increment(group_ptr);
@@ -869,15 +830,15 @@ dynparam_get_parameter(
   switch (parameter_ptr->type)
   {
   case LV2DYNPARAM_PARAMETER_TYPE_BOOLEAN:
-    sprintf(value_str, "%c%s", SERIALIZE_TYPE_CHAR_BOOLEAN, parameter_ptr->data.boolean ? "true" : "false");
+    sprintf(value_str, "%c%s", SERIALIZE_TYPE_CHAR_BOOLEAN, parameter_ptr->value.boolean ? "true" : "false");
     value = value_str;
     break;
   case LV2DYNPARAM_PARAMETER_TYPE_FLOAT:
-    sprintf(value_str, "%c%f", SERIALIZE_TYPE_CHAR_FLOAT, parameter_ptr->data.fpoint.value);
+    sprintf(value_str, "%c%f", SERIALIZE_TYPE_CHAR_FLOAT, parameter_ptr->value.fpoint);
     value = value_str;
     break;
   case LV2DYNPARAM_PARAMETER_TYPE_ENUM:
-    value_enum = parameter_ptr->data.enumeration.values[parameter_ptr->data.enumeration.selected_value];
+    value_enum = parameter_ptr->range.enumeration.values[parameter_ptr->value.enum_selected_index];
 
     value_buffer = malloc(strlen(value_enum) + 2);
     if (value_buffer == NULL)
@@ -893,7 +854,7 @@ dynparam_get_parameter(
     value = value_buffer;
     break;
   case LV2DYNPARAM_PARAMETER_TYPE_INT:
-    sprintf(value_str, "%c%i", SERIALIZE_TYPE_CHAR_INT, parameter_ptr->data.integer.value);
+    sprintf(value_str, "%c%i", SERIALIZE_TYPE_CHAR_INT, parameter_ptr->value.integer);
     value = value_str;
     break;
   default:
@@ -1027,25 +988,25 @@ parameter_value_change(
 {
   unsigned int i;
 
-  if (value_ptr != &parameter_ptr->data)
+  if (value_ptr != &parameter_ptr->value)
   {
     if (parameter_ptr->type == LV2DYNPARAM_PARAMETER_TYPE_ENUM)
     {
       if (value_type == LV2DYNPARAM_PARAMETER_TYPE_STRING)
       {
         LOG_DEBUG("searching for enum value '%s'", value_ptr->string);
-        for (i = 0 ; i < parameter_ptr->data.enumeration.values_count ; i++)
+        for (i = 0 ; i < parameter_ptr->range.enumeration.values_count ; i++)
         {
-          if (strcmp(parameter_ptr->data.enumeration.values[i], value_ptr->string) == 0)
+          if (strcmp(parameter_ptr->range.enumeration.values[i], value_ptr->string) == 0)
           {
-            parameter_ptr->data.enumeration.selected_value = i;
+            parameter_ptr->value.enum_selected_index = i;
             goto push;
           }
         }
       }
       else
       {
-        parameter_ptr->data.enumeration.selected_value = value_ptr->enumeration.selected_value;
+        parameter_ptr->value.enum_selected_index = value_ptr->enum_selected_index;
         goto push;
       }
 
@@ -1056,16 +1017,15 @@ parameter_value_change(
     switch (parameter_ptr->type)
     {
     case LV2DYNPARAM_PARAMETER_TYPE_BOOLEAN:
-      parameter_ptr->data.boolean = value_ptr->boolean;
+      parameter_ptr->value.boolean = value_ptr->boolean;
       break;
     case LV2DYNPARAM_PARAMETER_TYPE_FLOAT:
-      parameter_ptr->data.fpoint.value = value_ptr->fpoint.value;
+      parameter_ptr->value.fpoint = value_ptr->fpoint;
       break;
     case LV2DYNPARAM_PARAMETER_TYPE_INT:
-      parameter_ptr->data.integer.value = value_ptr->integer.value;
+      parameter_ptr->value.integer = value_ptr->integer;
       break;
     case LV2DYNPARAM_PARAMETER_TYPE_ENUM:
-      parameter_ptr->data.integer.value = value_ptr->integer.value;
       /* whoa? we should enter the "if type is enum" statement above */
       assert(0);
     default:
@@ -1078,16 +1038,16 @@ push:
   switch (parameter_ptr->type)
   {
   case LV2DYNPARAM_PARAMETER_TYPE_BOOLEAN:
-    *((unsigned char *)parameter_ptr->value_ptr) = parameter_ptr->data.boolean ? 1 : 0;
+    *((unsigned char *)parameter_ptr->value_ptr) = parameter_ptr->value.boolean ? 1 : 0;
     break;
   case LV2DYNPARAM_PARAMETER_TYPE_FLOAT:
-    *((float *)parameter_ptr->value_ptr) = parameter_ptr->data.fpoint.value;
+    *((float *)parameter_ptr->value_ptr) = parameter_ptr->value.fpoint;
     break;
   case LV2DYNPARAM_PARAMETER_TYPE_ENUM:
-    *((unsigned int *)parameter_ptr->value_ptr) = parameter_ptr->data.enumeration.selected_value;
+    *((unsigned int *)parameter_ptr->value_ptr) = parameter_ptr->value.enum_selected_index;
     break;
   case LV2DYNPARAM_PARAMETER_TYPE_INT:
-    *((signed int *)parameter_ptr->value_ptr) = parameter_ptr->data.integer.value;
+    *((signed int *)parameter_ptr->value_ptr) = parameter_ptr->value.integer;
     break;
   default:
     LOG_ERROR("Parameter change for parameter of unknown type %u received", parameter_ptr->type);
@@ -1143,7 +1103,7 @@ lv2dynparam_host_realtime_run(
     {
     case LV2DYNPARAM_HOST_MESSAGE_TYPE_PARAMETER_CHANGE:
       parameter_ptr = message_ptr->context.parameter;
-      parameter_value_change(instance_ptr, parameter_ptr, parameter_ptr->type, &parameter_ptr->data);
+      parameter_value_change(instance_ptr, parameter_ptr, parameter_ptr->type, &parameter_ptr->value);
       break;
 
     case LV2DYNPARAM_HOST_MESSAGE_TYPE_UNKNOWN_PARAMETER_CHANGE:
@@ -1189,23 +1149,24 @@ lv2dynparam_host_ui_run(
 
   audiolock_enter_ui(instance_ptr->lock);
 
-  if (instance_ptr->ui)         /* we have nothing to do if there is no ui shown */
+  if (instance_ptr->ui)
   {
     /* At this point we should have the root group appeared and gui-referenced,
        because it appears on host attach that is called before lv2dynparam_host_ui_on()
        and because lv2dynparam_host_ui_on() will gui-reference it. */
     assert(instance_ptr->root_group_ptr != NULL);
     assert(instance_ptr->root_group_ptr->pending_state == LV2DYNPARAM_PENDING_NOTHING);
-    //LOG_DEBUG("pending_childern_count is %u", instance_ptr->root_group_ptr->pending_childern_count);
+  }
 
-    if (instance_ptr->root_group_ptr->pending_childern_count != 0)
-    {
-      lv2dynparam_host_notify(
-        instance_ptr,
-        instance_ptr->root_group_ptr);
+  //LOG_DEBUG("pending_childern_count is %u", instance_ptr->root_group_ptr->pending_childern_count);
 
-      assert(instance_ptr->root_group_ptr->pending_childern_count == 0);
-    }
+  if (instance_ptr->root_group_ptr->pending_childern_count != 0)
+  {
+    lv2dynparam_host_notify(
+      instance_ptr,
+      instance_ptr->root_group_ptr);
+
+    assert(!instance_ptr->ui || instance_ptr->root_group_ptr->pending_childern_count == 0);
   }
 
   audiolock_leave_ui(instance_ptr->lock);
@@ -1280,102 +1241,45 @@ lv2dynparam_host_detach(
 #define parameter_ptr ((struct lv2dynparam_host_parameter *)parameter_handle)
 
 void
-lv2dynparam_parameter_boolean_change(
+lv2dynparam_parameter_change(
   lv2dynparam_host_instance instance,
   lv2dynparam_host_parameter parameter_handle,
-  bool value)
+  union lv2dynparam_host_parameter_value value)
 {
   struct lv2dynparam_host_message * message_ptr;
 
   audiolock_enter_ui(instance_ptr->lock);
 
-  LOG_DEBUG("\"%s\" changed to \"%s\"", parameter_ptr->name, value ? "TRUE" : "FALSE");
+  switch (parameter_ptr->type)
+  {
+  case LV2DYNPARAM_PARAMETER_TYPE_BOOLEAN:
+    LOG_DEBUG("\"%s\" changed to \"%s\"", parameter_ptr->name, value.boolean ? "TRUE" : "FALSE");
+    parameter_ptr->value.boolean = value.boolean;
+    break;
+  case LV2DYNPARAM_PARAMETER_TYPE_FLOAT:
+    LOG_DEBUG("\"%s\" changed to %f", parameter_ptr->name, value.fpoint);
+    parameter_ptr->value.fpoint = value.fpoint;
+    break;
+  case LV2DYNPARAM_PARAMETER_TYPE_ENUM:
+    LOG_DEBUG("\"%s\" changed to \"%s\" (index %u)", parameter_ptr->name, parameter_ptr->range.enumeration.values[value.enum_selected_index], value.enum_selected_index);
+    parameter_ptr->value.enum_selected_index = value.enum_selected_index;
+    break;
+  case LV2DYNPARAM_PARAMETER_TYPE_INT:
+    LOG_DEBUG("\"%s\" changed to %d", parameter_ptr->name, value.integer);
+    parameter_ptr->value.integer = value.integer;
+    break;
+  default:
+    LOG_ERROR("unknown parameter type");
+    assert(0);
+    goto unlock;
+  }
 
   message_ptr = rtsafe_memory_pool_allocate_sleepy(instance_ptr->messages_pool);
-
-  parameter_ptr->data.boolean = value;
-
   message_ptr->message_type = LV2DYNPARAM_HOST_MESSAGE_TYPE_PARAMETER_CHANGE;
-
   message_ptr->context.parameter = parameter_ptr;
-
   list_add_tail(&message_ptr->siblings, &instance_ptr->ui_to_realtime_queue);
 
-  audiolock_leave_ui(instance_ptr->lock);
-}
-
-void
-lv2dynparam_parameter_float_change(
-  lv2dynparam_host_instance instance,
-  lv2dynparam_host_parameter parameter_handle,
-  float value)
-{
-  struct lv2dynparam_host_message * message_ptr;
-
-  audiolock_enter_ui(instance_ptr->lock);
-
-  LOG_DEBUG("\"%s\" changed to %f", parameter_ptr->name, value);
-
-  message_ptr = rtsafe_memory_pool_allocate_sleepy(instance_ptr->messages_pool);
-
-  parameter_ptr->data.fpoint.value = value;
-
-  message_ptr->message_type = LV2DYNPARAM_HOST_MESSAGE_TYPE_PARAMETER_CHANGE;
-
-  message_ptr->context.parameter = parameter_ptr;
-
-  list_add_tail(&message_ptr->siblings, &instance_ptr->ui_to_realtime_queue);
-
-  audiolock_leave_ui(instance_ptr->lock);
-}
-
-void
-lv2dynparam_parameter_enum_change(
-  lv2dynparam_host_instance instance,
-  lv2dynparam_host_parameter parameter_handle,
-  unsigned int selected_index_value)
-{
-  struct lv2dynparam_host_message * message_ptr;
-
-  audiolock_enter_ui(instance_ptr->lock);
-
-  LOG_DEBUG("\"%s\" changed to \"%s\" (index %u)", parameter_ptr->name, parameter_ptr->data.enumeration.values[selected_index_value], selected_index_value);
-
-  message_ptr = rtsafe_memory_pool_allocate_sleepy(instance_ptr->messages_pool);
-
-  parameter_ptr->data.enumeration.selected_value = selected_index_value;
-
-  message_ptr->message_type = LV2DYNPARAM_HOST_MESSAGE_TYPE_PARAMETER_CHANGE;
-
-  message_ptr->context.parameter = parameter_ptr;
-
-  list_add_tail(&message_ptr->siblings, &instance_ptr->ui_to_realtime_queue);
-
-  audiolock_leave_ui(instance_ptr->lock);
-}
-
-void
-lv2dynparam_parameter_int_change(
-  lv2dynparam_host_instance instance,
-  lv2dynparam_host_parameter parameter_handle,
-  signed int value)
-{
-  struct lv2dynparam_host_message * message_ptr;
-
-  audiolock_enter_ui(instance_ptr->lock);
-
-  LOG_DEBUG("\"%s\" changed to %d", parameter_ptr->name, value);
-
-  message_ptr = rtsafe_memory_pool_allocate_sleepy(instance_ptr->messages_pool);
-
-  parameter_ptr->data.integer.value = value;
-
-  message_ptr->message_type = LV2DYNPARAM_HOST_MESSAGE_TYPE_PARAMETER_CHANGE;
-
-  message_ptr->context.parameter = parameter_ptr;
-
-  list_add_tail(&message_ptr->siblings, &instance_ptr->ui_to_realtime_queue);
-
+unlock:
   audiolock_leave_ui(instance_ptr->lock);
 }
 
@@ -1480,13 +1384,9 @@ set_parameter(
   lv2dynparam_host_instance instance,
   const char * parameter_name,
   const char * parameter_value,
-  const unsigned int * type_ptr,
   union lv2dynparam_host_parameter_value * value_ptr)
 {
   char * locale;
-  unsigned int i;
-  unsigned int selected_index;
-  unsigned int selected_index_found;
   char typechar;
   unsigned int type;
 
@@ -1512,12 +1412,6 @@ set_parameter(
     return LV2DYNPARAM_PARAMETER_TYPE_UNKNOWN;
   }
 
-  if (type_ptr != NULL && *type_ptr != type)
-  {
-    LOG_ERROR("Wrong value '%s' type '%c' for parameter '%s'", parameter_value, typechar, parameter_name);
-    return LV2DYNPARAM_PARAMETER_TYPE_UNKNOWN;
-  }
-
   locale = strdup(setlocale(LC_NUMERIC, NULL));
   setlocale(LC_NUMERIC, "POSIX");
 
@@ -1539,38 +1433,13 @@ set_parameter(
     }
     break;
   case LV2DYNPARAM_PARAMETER_TYPE_FLOAT:
-    if (sscanf(parameter_value, "%f", &value_ptr->fpoint.value) != 1)
+    if (sscanf(parameter_value, "%f", &value_ptr->fpoint) != 1)
     {
       LOG_ERROR("failed to convert value '%s' of parameter '%s' to float", parameter_value, parameter_name);
       type = LV2DYNPARAM_PARAMETER_TYPE_UNKNOWN;
     }
     break;
   case LV2DYNPARAM_PARAMETER_TYPE_ENUM:
-    if (type_ptr != NULL)
-    {
-      selected_index_found = false;
-      for (i = 0 ; i < value_ptr->enumeration.values_count ; i++)
-      {
-        if (strcmp(value_ptr->enumeration.values[i], parameter_value) == 0)
-        {
-          selected_index = i;
-          selected_index_found = true;
-          break;
-        }
-      }
-
-      if (!selected_index_found)
-      {
-        LOG_ERROR("Wrong value '%s' for enum parameter '%s'", parameter_value, parameter_name);
-        type = LV2DYNPARAM_PARAMETER_TYPE_UNKNOWN;
-      }
-      else
-      {
-        value_ptr->enumeration.selected_value = selected_index;
-      }
-
-      break;
-    }
     /* fall through */
   case LV2DYNPARAM_PARAMETER_TYPE_STRING:
     value_ptr->string = lv2dynparam_strdup_sleepy(instance_ptr->memory, parameter_value);
@@ -1581,7 +1450,7 @@ set_parameter(
     }
     break;
   case LV2DYNPARAM_PARAMETER_TYPE_INT:
-    if (sscanf(parameter_value, "%i", &value_ptr->integer.value) != 1)
+    if (sscanf(parameter_value, "%i", &value_ptr->integer) != 1)
     {
       LOG_ERROR("failed to convert value '%s' of parameter '%s' to signed int", parameter_value, parameter_name);
       type = LV2DYNPARAM_PARAMETER_TYPE_UNKNOWN;
@@ -1634,7 +1503,7 @@ lv2dynparam_set_parameter(
   }
 
   message_ptr->context.value_change = value_ptr;
-  value_ptr->type = set_parameter(instance, parameter_name, parameter_value, NULL, &value_ptr->data);
+  value_ptr->type = set_parameter(instance, parameter_name, parameter_value, &value_ptr->data);
   if (value_ptr->type != LV2DYNPARAM_PARAMETER_TYPE_UNKNOWN)
   {
     LOG_DEBUG("Pending parameter '%s' value change to '%s' (%c)", parameter_name, parameter_value + 1, *parameter_value);

@@ -94,6 +94,13 @@ void
   lv2dynparam_host_parameter parameter_handle,
   void ** parameter_context_ptr);
 
+typedef
+void
+(* lv2dynparam_parameter_value_change_context)(
+  void * instance_context,
+  void * parameter_context,
+  void * value_change_context);
+
 /**
  * Typedef for callback function to be called when parameter is being destroyed.
  *
@@ -135,6 +142,7 @@ lv2dynparam_host_attach(
   void * instance_context,
   lv2dynparam_parameter_created parameter_created_callback,
   lv2dynparam_parameter_destroying parameter_destroying_callback,
+  lv2dynparam_parameter_value_change_context parameter_value_change_context,
   lv2dynparam_host_instance * instance_ptr);
 
 /**
@@ -362,6 +370,7 @@ void
 lv2dynparam_set_parameter(
   lv2dynparam_host_instance instance,
   const char * parameter_name,
-  const char * parameter_value);
+  const char * parameter_value,
+  void * context);
 
 #endif /* #ifndef DYNPARAM_H__5090F477_0BE7_439F_BF1D_F2EB78822760__INCLUDED */

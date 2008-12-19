@@ -67,9 +67,11 @@ struct lv2dynparam_host_parameter
   unsigned int pending_state;
 
   bool context_set;
-  void * context;
+  void * context;               /* associated on create callback */
 
-  void * ui_context;
+  void * context_pending_value_change; /* associated with pending value change */
+
+  void * ui_context;            /* associated with UI (appear) */
 };
 
 struct lv2dynparam_host_command
@@ -89,6 +91,7 @@ struct lv2dynparam_host_parameter_pending_value_change
   char * name_asciizz;
   unsigned int type;
   union lv2dynparam_host_parameter_value data;
+  void * context;
 };
 
 #define LV2DYNPARAM_HOST_MESSAGE_TYPE_PARAMETER_CHANGE          0
@@ -135,6 +138,7 @@ struct lv2dynparam_host_instance
 
   lv2dynparam_parameter_created parameter_created_callback;
   lv2dynparam_parameter_destroying parameter_destroying_callback;
+  lv2dynparam_parameter_value_change_context parameter_value_change_context;
 };
 
 bool

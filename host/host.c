@@ -132,6 +132,7 @@ lv2dynparam_host_attach(
   void * instance_context,
   lv2dynparam_parameter_created parameter_created_callback,
   lv2dynparam_parameter_destroying parameter_destroying_callback,
+  lv2dynparam_parameter_value_change_context parameter_value_change_context,
   lv2dynparam_host_instance * instance_handle_ptr)
 {
   struct lv2dynparam_host_instance * instance_ptr;
@@ -152,6 +153,7 @@ lv2dynparam_host_attach(
 
   instance_ptr->parameter_created_callback = parameter_created_callback;
   instance_ptr->parameter_destroying_callback = parameter_destroying_callback;
+  instance_ptr->parameter_value_change_context = parameter_value_change_context;
 
   instance_ptr->instance_context = instance_context;
 
@@ -546,6 +548,20 @@ lv2dynparam_host_notify(
           &parameter_ptr->context);
 
         parameter_ptr->context_set = true;
+      }
+
+      if (parameter_ptr->context_pending_value_change != NULL)
+      {
+        if (instance_ptr->parameter_value_change_context != NULL)
+        {
+          instance_ptr->parameter_value_change_context(
+            instance_ptr->instance_context,
+            parameter_ptr->context,
+            parameter_ptr->context_pending_value_change);
+        }
+
+        lv2dynparam_host_group_pending_children_count_decrement(parameter_ptr->group_ptr);
+        parameter_ptr->context_pending_value_change = NULL;
       }
 
       if (instance_ptr->ui)
@@ -1111,7 +1127,15 @@ lv2dynparam_host_realtime_run(
       if (parameter_ptr != NULL)
       {
         LOG_DEBUG("Applying pending parameter '%s' value change", parameter_ptr->name);
+
         parameter_value_change(instance_ptr, parameter_ptr, value_ptr->type, &value_ptr->data);
+
+        parameter_ptr->context_pending_value_change = value_ptr->context;
+        if (value_ptr->context != NULL)
+        {
+          lv2dynparam_host_group_pending_children_count_increment(parameter_ptr->group_ptr);
+        }
+
         free_parameter_pending_value_change(
           instance_ptr,
           value_ptr,
@@ -1469,7 +1493,8 @@ void
 lv2dynparam_set_parameter(
   lv2dynparam_host_instance instance,
   const char * parameter_name,
-  const char * parameter_value)
+  const char * parameter_value,
+  void * context)
 {
   char * parameter_name_asciizz;
   struct lv2dynparam_host_message * message_ptr;
@@ -1506,6 +1531,7 @@ lv2dynparam_set_parameter(
   {
     LOG_DEBUG("Pending parameter '%s' value change to '%s' (%c)", parameter_name, parameter_value + 1, *parameter_value);
     value_ptr->name_asciizz = parameter_name_asciizz;
+    value_ptr->context = context;
     list_add_tail(&message_ptr->siblings, &instance_ptr->ui_to_realtime_queue);
     goto unlock;
   }

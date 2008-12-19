@@ -479,8 +479,6 @@ lv2dynparam_host_notify(
 
   //LOG_DEBUG("Iterating \"%s\" groups begin", group_ptr->name);
 
-  assert(instance_ptr->ui);
-
   list_for_each(node_ptr, &group_ptr->child_groups)
   {
     if (group_ptr->pending_childern_count == 0)

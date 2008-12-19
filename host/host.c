@@ -868,7 +868,7 @@ dynparam_get_parameter(
   free(locale);
 
   LOG_DEBUG("Parameter '%s' with value '%s'", last_ptr, value);
-  callback(context, last_ptr, value);
+  callback(context, parameter_ptr->context, last_ptr, value);
 
   if (value_buffer != NULL)
   {

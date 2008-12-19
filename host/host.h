@@ -330,6 +330,7 @@ typedef
 void
 (* lv2dynparam_parameter_get_callback)(
   void * context,
+  void * parameter_context,
   const char * parameter_name,
   const char * parameter_value);
 

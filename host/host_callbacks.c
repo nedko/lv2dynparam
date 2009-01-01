@@ -167,6 +167,7 @@ lv2dynparam_host_parameter_appear(
 
   param_ptr->param_handle = parameter;
   param_ptr->context_set = false;
+  param_ptr->pending_value_change = false;
 
   instance_ptr->callbacks_ptr->parameter_get_name(parameter, param_ptr->name);
   instance_ptr->callbacks_ptr->parameter_get_type_uri(parameter, param_ptr->type_uri);

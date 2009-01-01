@@ -65,6 +65,7 @@ struct lv2dynparam_host_parameter
   union lv2dynparam_host_parameter_value value;
 
   unsigned int pending_state;
+  bool pending_value_change;
 
   bool context_set;
   void * context;               /* associated on create callback */

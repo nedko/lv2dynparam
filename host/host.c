@@ -545,6 +545,8 @@ lv2dynparam_host_notify(
         instance_ptr->parameter_created_callback(
           instance_ptr->instance_context,
           parameter_ptr,
+          parameter_ptr->type,
+          parameter_ptr->name,
           &parameter_ptr->context);
 
         parameter_ptr->context_set = true;
@@ -612,6 +614,27 @@ lv2dynparam_host_notify(
     default:
       LOG_ERROR("unknown pending_state %u of parameter \"%s\"", parameter_ptr->pending_state, parameter_ptr->name);
       assert(0);
+    }
+
+    if (parameter_ptr->pending_value_change)
+    {
+      if (instance_ptr->ui)
+      {
+        LOG_DEBUG("notifying host about value change");
+
+        dynparam_ui_parameter_value_changed(
+          instance_ptr->instance_context,
+          parameter_ptr->context,
+          parameter_ptr->ui_context,
+          parameter_ptr->value);
+      }
+      else
+      {
+        LOG_DEBUG("ignoring value change because UI is off");
+      }
+
+      parameter_ptr->pending_value_change = false;
+      lv2dynparam_host_group_pending_children_count_decrement(parameter_ptr->group_ptr);
     }
   }
 
@@ -1053,15 +1076,19 @@ push:
   {
   case LV2DYNPARAM_PARAMETER_TYPE_BOOLEAN:
     *((unsigned char *)parameter_ptr->value_ptr) = parameter_ptr->value.boolean ? 1 : 0;
+    LOG_DEBUG("\"%s\" changed to \"%s\"", parameter_ptr->name, parameter_ptr->value.boolean ? "TRUE" : "FALSE");
     break;
   case LV2DYNPARAM_PARAMETER_TYPE_FLOAT:
     *((float *)parameter_ptr->value_ptr) = parameter_ptr->value.fpoint;
+    LOG_DEBUG("\"%s\" changed to %f", parameter_ptr->name, parameter_ptr->value.fpoint);
     break;
   case LV2DYNPARAM_PARAMETER_TYPE_ENUM:
     *((unsigned int *)parameter_ptr->value_ptr) = parameter_ptr->value.enum_selected_index;
+    LOG_DEBUG("\"%s\" changed to \"%s\" (index %u)", parameter_ptr->name, parameter_ptr->range.enumeration.values[parameter_ptr->value.enum_selected_index], parameter_ptr->value.enum_selected_index);
     break;
   case LV2DYNPARAM_PARAMETER_TYPE_INT:
     *((signed int *)parameter_ptr->value_ptr) = parameter_ptr->value.integer;
+    LOG_DEBUG("\"%s\" changed to %d", parameter_ptr->name, parameter_ptr->value.integer);
     break;
   default:
     LOG_ERROR("Parameter change for parameter of unknown type %u received", parameter_ptr->type);
@@ -1092,6 +1119,30 @@ free_parameter_pending_value_change(
 }
 
 #define instance_ptr ((struct lv2dynparam_host_instance *)instance)
+#define parameter_ptr ((struct lv2dynparam_host_parameter *)parameter_handle)
+
+void
+lv2dynparam_parameter_change_rt(
+  lv2dynparam_host_instance instance,
+  lv2dynparam_host_parameter parameter_handle,
+  union lv2dynparam_host_parameter_value value)
+{
+  parameter_value_change(instance_ptr, parameter_ptr, parameter_ptr->type, &value);
+
+  /* schedule call to dynparam_parameter_value_changed() */
+
+  if (parameter_ptr->pending_state != LV2DYNPARAM_PENDING_NOTHING ||
+      parameter_ptr->pending_value_change)
+  {
+    /* no need to do this if parameter has not yet appeared or is going to disappear or we already scheduled it */
+    return;
+  }
+
+  parameter_ptr->pending_value_change = true;
+  lv2dynparam_host_group_pending_children_count_increment(parameter_ptr->group_ptr);
+}
+
+#undef parameter_ptr
 
 void
 lv2dynparam_host_realtime_run(

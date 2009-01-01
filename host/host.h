@@ -92,6 +92,8 @@ void
 (* lv2dynparam_parameter_created)(
   void * instance_context,
   lv2dynparam_host_parameter parameter_handle,
+  unsigned int parameter_type,
+  const char * parameter_name,
   void ** parameter_context_ptr);
 
 typedef
@@ -314,6 +316,23 @@ dynparam_ui_parameter_disappeared(
 
 /**
  * Call this function to change parameter value.
+ * dynparam_parameter_value_changed() will be call will be scheduled
+ * Must be called from from audio/midi realtime thread.
+ * This function will not sleep/lock.
+ *
+ * @param instance Handle to instance received from lv2dynparam_host_attach()
+ * @param parameter_handle handle of parameter which value will be changed
+ * @param value the new value
+ */
+void
+lv2dynparam_parameter_change_rt(
+  lv2dynparam_host_instance instance,
+  lv2dynparam_host_parameter parameter_handle,
+  union lv2dynparam_host_parameter_value value);
+
+/**
+ * Call this function to change parameter value.
+ * dynparam_parameter_value_changed() will not be called
  * Must be called from the UI thread.
  * This function may sleep/lock.
  *
@@ -325,6 +344,17 @@ void
 lv2dynparam_parameter_change(
   lv2dynparam_host_instance instance,
   lv2dynparam_host_parameter parameter_handle,
+  union lv2dynparam_host_parameter_value value);
+
+/**
+ * Callback called from UI thread to notify host about parameter value change.
+ *
+ */
+void
+dynparam_ui_parameter_value_changed(
+  void * instance_context,
+  void * parameter_context,
+  void * parameter_ui_context,
   union lv2dynparam_host_parameter_value value);
 
 /**

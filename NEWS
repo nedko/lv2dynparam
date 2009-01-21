@@ -1,0 +1,8 @@
+= Version 2 on 2009-01-21 =
+ * host library: API is refactored, the new API is NOT compatible with
+   the version 1 API
+ * host library: support for dynparam automation
+ * host library: support for dynparam parameter save/restore
+
+= Version 1 on 2008-01-09 =
+ * Initial release

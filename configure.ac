@@ -1,19 +1,21 @@
 # -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ(2.61)
-AC_INIT(lv2dynparam1, 2)
+AC_PREREQ([2.71])
+AC_INIT([lv2dynparam1],[2])
 AC_CONFIG_AUX_DIR(config)
-AM_INIT_AUTOMAKE
+AC_CONFIG_MACRO_DIRS([m4])
+AM_INIT_AUTOMAKE([subdir-objects])
+LT_INIT
+
 AC_CONFIG_SRCDIR([lv2dynparam.h])
-AC_CONFIG_HEADER([config.h])
+AC_CONFIG_HEADERS([config.h])
 
 if test -d $srcdir/.git ; then dev_version="yes" ; else dev_version="no"; fi
 AM_CONDITIONAL(DEV_VERSION, test "$dev_version" = "yes")
 
 # Checks for programs.
 AC_PROG_CC
-AC_PROG_LIBTOOL
 
 #DX_HTML_FEATURE(ON)
 #DX_CHM_FEATURE(OFF)
@@ -27,10 +29,6 @@ AC_PROG_LIBTOOL
 #DX_INIT_DOXYGEN(lv2dynparam, doxygen.cfg)
 
 # Checks for libraries.
-
-# Checks for header files.
-#AC_HEADER_STDC
-#AC_CHECK_HEADERS([stddef.h stdint.h stdlib.h string.h])
 
 PKG_CHECK_MODULES(LV2, lv2core >= 1)
 

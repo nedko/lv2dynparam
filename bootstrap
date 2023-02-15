@@ -9,6 +9,7 @@ then
 else
   set -x
   mkdir -p config
+  mkdir -p m4
   aclocal -I config
   libtoolize --copy --force
   autoheader

@@ -32,7 +32,7 @@ AC_PROG_LIBTOOL
 #AC_HEADER_STDC
 #AC_CHECK_HEADERS([stddef.h stdint.h stdlib.h string.h])
 
-PKG_CHECK_MODULES(LV2, lv2core >= 1)
+PKG_CHECK_MODULES(LV2, lv2 >= 1)
 
 # Checks for typedefs, structures, and compiler characteristics.
 #AC_C_CONST

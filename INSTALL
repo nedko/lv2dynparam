@@ -1,4 +1,17 @@
-These are the generic installation instructions.
+This codebase is built using autotools.
+
+Building from git source tree:
+First, run the bootstrap script:
+
+./boostrap
+
+This will create the configure script to run.
+
+At this point apart from standard autotools make targets,
+doxygen traget is usable. If doxygen is available,
+the doxygen target will build the documentation.
+
+Generic autotools installation instructions follow.
 
 Installation Instructions
 *************************

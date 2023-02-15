@@ -11,3 +11,6 @@ noinst_HEADERS = list.h helpers.h hint_set.h log.h memory_atomic.h
 
 # adding doxygen support
 #include $(top_srcdir)/aminclude.am
+
+doxygen:
+	make -f doxygen.mk

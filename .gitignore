@@ -22,3 +22,4 @@ Makefile.in
 /plugin/Makefile
 /stamp-h1
 /lv2dynparam.tag
+/doc/

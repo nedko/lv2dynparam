@@ -3,6 +3,6 @@ liblv2dynparamhost1_la_SOURCES = host.c host_callbacks.c ../audiolock.c ../log.c
 liblv2dynparamhost1_la_LDFLAGS = -version-info 1:0:0
 AM_CFLAGS = -Wall
 
-if DEV_VERSION
-AM_CFLAGS += -Werror
-endif
+#if DEV_VERSION
+#AM_CFLAGS += -Werror
+#endif

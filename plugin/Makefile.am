@@ -3,6 +3,6 @@ liblv2dynparamplugin1_la_SOURCES = plugin.c group.c parameter.c ../audiolock.c .
 liblv2dynparamplugin1_la_LDFLAGS = -version-info 0:0:0
 AM_CFLAGS = -Wall
 
-if DEV_VERSION
-AM_CFLAGS += -Werror
-endif
+#if DEV_VERSION
+#AM_CFLAGS += -Werror
+#endif

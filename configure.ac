@@ -11,8 +11,8 @@ LT_INIT
 AC_CONFIG_SRCDIR([lv2dynparam.h])
 AC_CONFIG_HEADERS([config.h])
 
-if test -d $srcdir/.git ; then dev_version="yes" ; else dev_version="no"; fi
-AM_CONDITIONAL(DEV_VERSION, test "$dev_version" = "yes")
+#if test -d $srcdir/.git ; then dev_version="yes" ; else dev_version="no"; fi
+#AM_CONDITIONAL(DEV_VERSION, test "$dev_version" = "yes")
 
 # Checks for programs.
 AC_PROG_CC

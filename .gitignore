@@ -21,3 +21,4 @@ Makefile.in
 /lv2dynparamplugin1.pc
 /plugin/Makefile
 /stamp-h1
+/lv2dynparam.tag

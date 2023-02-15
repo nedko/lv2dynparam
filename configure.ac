@@ -30,7 +30,9 @@ AC_PROG_CC
 
 # Checks for libraries.
 
-PKG_CHECK_MODULES(LV2, lv2core >= 1)
+PKG_CHECK_MODULES([LV2], [lv2core >= 1],, [
+    PKG_CHECK_MODULES([LV2], [lv2])
+])
 
 # Checks for typedefs, structures, and compiler characteristics.
 #AC_C_CONST

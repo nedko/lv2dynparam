@@ -11,6 +11,13 @@ At this point apart from standard autotools make targets,
 doxygen traget is usable. If doxygen is available,
 the doxygen target will build the documentation.
 
+In case tarball is required by packaging policy or for some other reason,
+running:
+
+make dist
+
+will generate the tarball.
+
 Generic autotools installation instructions follow.
 
 Installation Instructions
